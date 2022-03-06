@@ -1,0 +1,7 @@
+* Tutorial python source files
+  This tutorial files are written in python using flopy.
+
+  
+* Tutorial 3
+  This was coded based on the input files for modflow.
+  
