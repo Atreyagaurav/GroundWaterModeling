@@ -21,7 +21,7 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               delc=50,
                               delr=50,
                               top=3832,
-                              botm=3600)
+                              botm=np.linspace(3832, 3600, 10))
 
 ic = flopy.mf6.ModflowGwfic(gwf)
 
@@ -60,3 +60,28 @@ pmv.plot_vector(qx, qy, normalize=True, color="white")
 plt.savefig(f"{ws}/plot.png")
 
 plt.show()
+
+
+def plot_x_section(**kwargs):
+    fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
+    # first subplot
+    title_text = "; ".join((f'{k}={v}' for k, v in kwargs.items()))
+    ax.set_title(f"X-Section ({title_text})")
+    modelmap = flopy.plot.PlotCrossSection(
+        model=gwf,
+        ax=ax,
+        line=kwargs,
+    )
+    pa = modelmap.plot_array(head_arr, vmin=3832, vmax=3600)
+    quadmesh = modelmap.plot_bc("CHD")
+    linecollection = modelmap.plot_grid(lw=0.5, color="blue")
+    contours = modelmap.contour_array(
+        head_arr,
+        levels=np.arange(3815, 3830, .2),
+    )
+    ax.clabel(contours, fmt="%2.1f")
+    plt.colorbar(pa, shrink=0.5, ax=ax)
+    plt.show()
+
+
+plot_x_section(row=20)
