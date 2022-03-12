@@ -24,31 +24,11 @@ Height = 220
 Bottom = Top-Height
 
 # geo layers
-lyr_thickness = [50, 20, 150]
-lyr_subdivisions = [1, 4, 10]
-lyr_k_hz = [30.0, 3.0, 150.0]
-lyr_k_vt = [3.0, 0.01, 15.0]
-
-# computational layers
-NLay = sum(lyr_subdivisions)
-lookup_table = np.concatenate(
-    list(np.ones(s, dtype=int)*i for i, s in
-         enumerate(lyr_subdivisions)))
-
-thickness = np.zeros(NLay)
-k_hz = np.ones(NLay)
-k_vt = np.ones(NLay)
-bot = np.ones(NLay)
-
-for lay in range(NLay):
-    geo_lay = lookup_table[lay]
-    thickness[lay] = lyr_thickness[geo_lay]/lyr_subdivisions[geo_lay]
-    k_hz[lay] = lyr_k_hz[geo_lay]
-    k_vt[lay] = lyr_k_vt[geo_lay]
-    bot[lay] = Top-sum(thickness)
+geolyr_thickness = [50, 20, 150]
+geolyr_subdivisions = [6, 4, 10]
 
 
-grid_points = np.mgrid[X0:XN+1:ΔX, Y0:YN+1:ΔY].reshape(2, -1).T
+xy_grid_points = np.mgrid[X0:XN+1:ΔX, Y0:YN+1:ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN+1, NC)
 
 
@@ -86,14 +66,51 @@ def get_grid_points(shape, layers=None):
         layers = [0]
     else:
         layers = list(layers)
-    for i, gp in enumerate(grid_points):
+    for i, gp in enumerate(xy_grid_points):
         col = i // (NR+1)           # might have to swap these two.
         row = i % (NR+1)
         pt = geometry.Point(gp[0], gp[1])
         if shape.contains(pt):
-            # cellid, stage, cond, rbot, aux, boundname
+            # layer, row, col
             for j in layers:
                 yield (j, row, col)
+
+
+
+# computational layers
+NLay = sum(geolyr_subdivisions)
+lookup_table = np.concatenate(
+    list(np.ones(s, dtype=int)*i for i, s in
+         enumerate(geolyr_subdivisions)))
+
+# hetereogeiniety in 2nd geolayer
+layers_2nd = [i for i, v in enumerate(lookup_table) if v==1]
+k_2nd_layer = np.ones(shape=(NR, NC))*3.0
+kv_2nd_layer = np.ones(shape=(NR, NC))*.01
+for cell in get_grid_points(river):
+    k_2nd_layer[cell[1], cell[2]] = 30.0
+    kv_2nd_layer[cell[1], cell[2]] = 3.0
+
+
+lyr_k_hz = [30.0,
+            3.0,
+            150.0]
+lyr_k_vt = [3.0,
+            0.01,
+            15.0]
+
+
+thickness = np.zeros(NLay)
+k_hz = [0 for i in range(NLay)]
+k_vt = [0 for i in range(NLay)]
+bot = np.ones(NLay)
+
+for lay in range(NLay):
+    geo_lay = lookup_table[lay]
+    thickness[lay] = geolyr_thickness[geo_lay]/geolyr_subdivisions[geo_lay]
+    k_hz[lay] = lyr_k_hz[geo_lay]
+    k_vt[lay] = lyr_k_vt[geo_lay]
+    bot[lay] = Top-sum(thickness)
 
 
 def get_riv_stress_period():
@@ -102,11 +119,11 @@ def get_riv_stress_period():
     riv_layers = get_layers(bottom=river_bottom)
     for grid_pt in get_grid_points(river, layers=riv_layers):
         # cellid, stage, cond, rbot, aux, boundname
-        yield grid_pt, 10, 50, 10-25
+        yield grid_pt, 10, 50, bot[grid_pt[0]]
 
     stream_layers = get_layers(bottom=stream_bottom)
     for grid_pt in get_grid_points(stream, layers=stream_layers):
-        yield grid_pt, 10.5, 1, 10.5-3.3
+        yield grid_pt, 10.5, 1, bot[grid_pt[0]]
 
 
 def get_chd_stress_period():
@@ -134,6 +151,10 @@ def get_chd_stress_period():
 
 # plt.scatter(x, y)
 # plt.show()
+
+
+
+# MODELING STARTS FROM HERE:
 
 ws = './models/model-2'
 name = 'model-2'
@@ -171,6 +192,14 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
                               k=k_hz,
                               k33=k_vt,
                               save_specific_discharge=True)
+k_values = npf.k.get_data()
+kv_values = npf.k33.get_data()
+for lay in layers_2nd:
+    k_values[lay] = k_2nd_layer
+    kv_values[lay] = kv_2nd_layer
+npf.k.set_data(k_values)
+npf.k33.set_data(kv_values)
+
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
@@ -195,7 +224,6 @@ bud = gwf.output.budget()
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
-
 def plot_plan(layer=0):
     pmv = flopy.plot.PlotMapView(gwf)
     pmv.plot_array(head_arr[layer])
@@ -219,18 +247,23 @@ def plot_x_section(**kwargs):
         ax=ax,
         line=kwargs,
     )
-    pa = modelmap.plot_array(head_arr, vmin=Bottom, vmax=Top)
+    pa = modelmap.plot_array(head_arr, alpha=0.4)
+    pv = modelmap.plot_vector(qx, qy, qz,
+                              headwidth=3, headlength=4, width=2e-3,
+                              pivot='mid', minshaft=2, hstep=4, scale=2,
+                              color='blue')
     quadmesh = modelmap.plot_bc("CHD")
     linecollection = modelmap.plot_grid(lw=0.5, color="white")
     contours = modelmap.contour_array(
         head_arr,
-        levels=np.arange(0, 25, .1),
-        lw=0.5,
+        levels=np.arange(0, 25, .2),
+        mask=np.arange(0, 25, .2),
+        linewidths=0.5,
         colors='black'
     )
     ax.clabel(contours, fmt="%2.1f")
     # plt.colorbar(pa, shrink=0.5, ax=ax)
     plt.show()
 
-plot_plan(layer=1)
-plot_x_section(row=0)
+# plot_plan(layer=1)
+plot_x_section(row=20)
