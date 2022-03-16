@@ -141,12 +141,14 @@ plt.savefig("./images/tutorial-1.png")
 
   [[./images/tutorial-1.png]]
 
+* tutorial 2: Simple model
 
   
-* Tutorial 2: Water withdrawal Controversy
+* Tutorial 3: Water withdrawal Controversy
 
   SUMMARY:
 
   Prairie Valley Water is installing a high-capacity well to support their expanded bottled water operations. But the company's permit is denied by the state because the state’s water withdrawal assessment tool predicted that their proposed well could adversely impact the nearby trout stream. The company argues that their well will pump deep groundwater which will have no impact on what happens at the surface. You be the judge…should Prairie Valley Water get a permit?
 
-  [[./images/tutorial-2-site.png]]
+  [[./images/tutorial-3-site.png]]
+

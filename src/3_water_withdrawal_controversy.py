@@ -25,7 +25,7 @@ Bottom = Top-Height
 
 # geo layers
 geolyr_thickness = [50, 20, 150]
-geolyr_subdivisions = [6, 4, 10]
+geolyr_subdivisions = [3, 2, 5]
 
 
 xy_grid_points = np.mgrid[X0:XN+1:ΔX, Y0:YN+1:ΔY].reshape(2, -1).T
@@ -93,10 +93,10 @@ for cell in get_grid_points(river):
 
 
 lyr_k_hz = [30.0,
-            3.0,
+            k_2nd_layer,
             150.0]
 lyr_k_vt = [3.0,
-            0.01,
+            kv_2nd_layer,
             15.0]
 
 
@@ -138,6 +138,11 @@ def get_chd_stress_period():
     stream_layers = get_layers(bottom=stream_bottom)
     for grid_pt in get_grid_points(stream, layers=stream_layers):
         yield grid_pt, 10.5
+
+
+# def get_well_stress_period():
+#     # temp fix
+#     return {0: [(i, 20, 56, -400) for i in range(7, 15+7)]}
 
 
 # sp = list(get_riv_stress_period())
@@ -192,17 +197,24 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
                               k=k_hz,
                               k33=k_vt,
                               save_specific_discharge=True)
-k_values = npf.k.get_data()
-kv_values = npf.k33.get_data()
-for lay in layers_2nd:
-    k_values[lay] = k_2nd_layer
-    kv_values[lay] = kv_2nd_layer
-npf.k.set_data(k_values)
-npf.k33.set_data(kv_values)
+
+# EXample to modify the k values after it is defined.
+# k_values = npf.k.get_data()
+# kv_values = npf.k33.get_data()
+# for lay in layers_2nd:
+#     k_values[lay] = k_2nd_layer
+#     kv_values[lay] = kv_2nd_layer
+# npf.k.set_data(k_values)
+# npf.k33.set_data(kv_values)
 
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
+
+# wells = flopy.mf6.ModflowGwfwel(
+#     gwf,
+#     stress_period_data=list(get_well_stress_period()))
+
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -233,7 +245,7 @@ def plot_plan(layer=0):
                       cmap='Wistia')
     # flopy.plot.styles.graph_legend()
     pmv.plot_vector(qx, qy, normalize=True, color="white")
-    plt.savefig(f"{ws}/plot.png")
+    plt.savefig(f"./plots/plan.png")
     plt.show()
 
 
@@ -247,23 +259,24 @@ def plot_x_section(**kwargs):
         ax=ax,
         line=kwargs,
     )
-    pa = modelmap.plot_array(head_arr, alpha=0.4)
+    k_values = npf.k.get_data()
+    pa = modelmap.plot_array(k_values, alpha=0.6)
+    quadmesh = modelmap.plot_bc("CHD")
+    linecollection = modelmap.plot_grid(lw=0.2, color="white")
+    contours = modelmap.contour_array(
+        head_arr,
+        levels=np.arange(0, 25, .2),
+        linewidths=0.8,
+        colors='black'
+    )
     pv = modelmap.plot_vector(qx, qy, qz,
                               headwidth=3, headlength=4, width=2e-3,
                               pivot='mid', minshaft=2, hstep=4, scale=2,
                               color='blue')
-    quadmesh = modelmap.plot_bc("CHD")
-    linecollection = modelmap.plot_grid(lw=0.5, color="white")
-    contours = modelmap.contour_array(
-        head_arr,
-        levels=np.arange(0, 25, .2),
-        mask=np.arange(0, 25, .2),
-        linewidths=0.5,
-        colors='black'
-    )
     ax.clabel(contours, fmt="%2.1f")
     # plt.colorbar(pa, shrink=0.5, ax=ax)
+    plt.savefig(f"./plots/x-section.png")
     plt.show()
 
-# plot_plan(layer=1)
+plot_plan(layer=1)
 plot_x_section(row=20)

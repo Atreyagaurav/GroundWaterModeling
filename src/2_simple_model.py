@@ -3,11 +3,8 @@ import flopy
 import numpy as np
 import matplotlib.pyplot as plt
 
-import flopy
-import matplotlib.pyplot as plt
-
-ws = './models/model-2'
-name = 'model-2'
+ws = './models/2_simple_model'
+name = '2_simple_model'
 
 sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name='modflow-mf6')
 
@@ -16,12 +13,13 @@ ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
 dis = flopy.mf6.ModflowGwfdis(gwf,
+                              nlay=10,
                               nrow=60,
                               ncol=40,
                               delc=50,
                               delr=50,
                               top=3832,
-                              botm=np.linspace(3832, 3600, 10))
+                              botm=np.linspace(3832, 3600, 11)[1:])
 
 ic = flopy.mf6.ModflowGwfic(gwf)
 
@@ -57,7 +55,7 @@ pmv.plot_grid(colors='white', linewidths=0.3)
 pmv.contour_array(head_arr, linewidths=1., c_label=True, cmap='Wistia')
 # flopy.plot.styles.graph_legend()
 pmv.plot_vector(qx, qy, normalize=True, color="white")
-plt.savefig(f"{ws}/plot.png")
+plt.savefig("./images/01_00_plan.png")
 
 plt.show()
 
@@ -72,15 +70,27 @@ def plot_x_section(**kwargs):
         ax=ax,
         line=kwargs,
     )
-    pa = modelmap.plot_array(head_arr, vmin=3832, vmax=3600)
+    pa = modelmap.plot_array(head_arr, vmin=3600, vmax=3832)
     quadmesh = modelmap.plot_bc("CHD")
-    linecollection = modelmap.plot_grid(lw=0.5, color="blue")
+    linecollection = modelmap.plot_grid(lw=0.2, color="white")
+    minor_contours = modelmap.contour_array(
+        head_arr,
+        levels=np.arange(3600, 3832, .1),
+        linewidths=0.2,
+        colors='black'
+    )
     contours = modelmap.contour_array(
         head_arr,
-        levels=np.arange(3815, 3830, .2),
+        levels=np.arange(3600, 3832, .5),
+        linewidths=0.8,
+        colors='black'
     )
     ax.clabel(contours, fmt="%2.1f")
-    plt.colorbar(pa, shrink=0.5, ax=ax)
+    pv = modelmap.plot_vector(qx, qy, qz,
+                              headwidth=3, headlength=4, width=2e-3,
+                              pivot='mid', minshaft=2, hstep=4, scale=2,
+                              color='blue')
+    plt.savefig(f"./images/01_01_{title_text.replace('; ', '_')}.png")
     plt.show()
 
 
