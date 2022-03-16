@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 import flopy
 import matplotlib.pyplot as plt
 

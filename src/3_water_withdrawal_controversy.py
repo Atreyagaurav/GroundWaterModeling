@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import flopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,8 +26,10 @@ Bottom = Top-Height
 
 # geo layers
 geolyr_thickness = [50, 20, 150]
-geolyr_subdivisions = [3, 2, 5]
+geolyr_subdivisions = [10, 4, 30]
 
+
+WELL_ON = True
 
 xy_grid_points = np.mgrid[X0:XN+1:ΔX, Y0:YN+1:ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN+1, NC)
@@ -47,18 +50,28 @@ river = rect_2_poly(Rectangle(300, 0, 850, YN))
 river_top = 10
 river_height = 25
 river_bottom = river_top - river_height
+river_conductance = 50 * ΔX * ΔY  # leakance to conductance
 stream = rect_2_poly(Rectangle(6150, 0, 270, YN))
 stream_top = 10.5
 stream_height = 3.3
+stream_conductance = 1 * ΔX * ΔY  # leakance to conductance
 stream_bottom = stream_top - stream_height
 well = geometry.Point((5720, 2000))
+well_top = -150
+well_bottom = -160
+well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
 
 
 def get_layers(top=Top, bottom=Bottom):
-    if bottom >= bot[0]:
-        yield 0
-    else:
-        yield from (i for i, b in enumerate(bot) if b > bottom)
+    all_layers = [(i, b) for i, b in enumerate(bot) if b < top]
+    for i, b in all_layers:
+        if b > bottom:
+            yield i, top, b
+        else:
+            break
+        top = b
+    if b <= bottom:
+        yield i, top, bottom
 
 
 def get_grid_points(shape, layers=None):
@@ -116,33 +129,41 @@ for lay in range(NLay):
 def get_riv_stress_period():
     "gives the stress_period_data on the grid_points for river grids."
 
-    riv_layers = get_layers(bottom=river_bottom)
-    for grid_pt in get_grid_points(river, layers=riv_layers):
-        # cellid, stage, cond, rbot, aux, boundname
-        yield grid_pt, 10, 50, bot[grid_pt[0]]
+    layers_tuple = list(get_layers(top=river_top, bottom=river_bottom))
+    for grid_pt in get_grid_points(river):
+        for lay, thk, bottom in layers_tuple:
+            # cellid, stage, cond, rbot, aux, boundname
+            yield ((lay, grid_pt[1], grid_pt[2]),
+                   thk, river_conductance, bottom)
 
-    stream_layers = get_layers(bottom=stream_bottom)
-    for grid_pt in get_grid_points(stream, layers=stream_layers):
-        yield grid_pt, 10.5, 1, bot[grid_pt[0]]
+    layers_tuple = list(get_layers(top=stream_top, bottom=stream_bottom))
+    for grid_pt in get_grid_points(stream):
+        for lay, thk, bottom in layers_tuple:
+            yield ((lay, grid_pt[1], grid_pt[2]),
+                   thk, stream_conductance, bottom)
 
 
 def get_chd_stress_period():
     "gives the stress_period_data on the grid_points for constant head points."
     # river grid points
-    riv_layers = get_layers(bottom=river_bottom)
-    for grid_pt in get_grid_points(river, layers=riv_layers):
-        # cellid, head
-        yield grid_pt, 10
+    layers_tuple = list(get_layers(top=river_top, bottom=river_bottom))
+    for grid_pt in get_grid_points(river):
+        for lay, thk, bottom in layers_tuple:
+            # cellid, head
+            yield ((lay, grid_pt[1], grid_pt[2]), 10)
 
     # stream grid points
-    stream_layers = get_layers(bottom=stream_bottom)
-    for grid_pt in get_grid_points(stream, layers=stream_layers):
-        yield grid_pt, 10.5
+    layers_tuple = list(get_layers(top=stream_top, bottom=stream_bottom))
+    for grid_pt in get_grid_points(stream):
+        for lay, thk, bottom in layers_tuple:
+            yield ((lay, grid_pt[1], grid_pt[2]), 10.5)
 
 
-# def get_well_stress_period():
-#     # temp fix
-#     return {0: [(i, 20, 56, -400) for i in range(7, 15+7)]}
+def get_well_stress_period():
+    # temp fix
+    well_layers = list(get_layers(well_top, well_bottom))
+    return {0: [((i, 20, 56), well_rate/len(well_layers)) for i, _, _ in
+                well_layers]}
 
 
 # sp = list(get_riv_stress_period())
@@ -211,9 +232,10 @@ chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
 
-# wells = flopy.mf6.ModflowGwfwel(
-#     gwf,
-#     stress_period_data=list(get_well_stress_period()))
+if WELL_ON:
+    wells = flopy.mf6.ModflowGwfwel(
+        gwf,
+        stress_period_data=get_well_stress_period())
 
 budget_file = name + '.bud'
 head_file = name + '.hds'
@@ -236,16 +258,20 @@ bud = gwf.output.budget()
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
+
 def plot_plan(layer=0):
-    pmv = flopy.plot.PlotMapView(gwf)
+    fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
+    ax.set_title(f'Layer-{layer}')
+    pmv = flopy.plot.PlotMapView(gwf, ax=ax)
     pmv.plot_array(head_arr[layer])
     pmv.plot_grid(colors='white', linewidths=0.3)
     pmv.contour_array(head_arr[layer],
                       linewidths=1.,
                       cmap='Wistia')
     # flopy.plot.styles.graph_legend()
-    pmv.plot_vector(qx, qy, normalize=True, color="white")
-    plt.savefig(f"./plots/plan.png")
+    pmv.plot_vector(qx[layer, :, :], qy[layer, :, :],
+                    normalize=False, istep=2, jstep=2, color="white")
+    plt.savefig(f"./images/03_00_plan_layer-{layer}.png")
     plt.show()
 
 
@@ -263,20 +289,34 @@ def plot_x_section(**kwargs):
     pa = modelmap.plot_array(k_values, alpha=0.6)
     quadmesh = modelmap.plot_bc("CHD")
     linecollection = modelmap.plot_grid(lw=0.2, color="white")
-    contours = modelmap.contour_array(
+    minor_contours = modelmap.contour_array(
         head_arr,
         levels=np.arange(0, 25, .2),
+        linewidths=0.4,
+        colors='black'
+    )
+    contours = modelmap.contour_array(
+        head_arr,
+        head=head_arr,
+        levels=np.arange(0, 25, 1),
         linewidths=0.8,
         colors='black'
     )
+    ax.clabel(contours, fmt="%.0f")
     pv = modelmap.plot_vector(qx, qy, qz,
                               headwidth=3, headlength=4, width=2e-3,
-                              pivot='mid', minshaft=2, hstep=4, scale=2,
+                              pivot='mid', minshaft=2, hstep=4,
+                              scale=3,
                               color='blue')
-    ax.clabel(contours, fmt="%2.1f")
     # plt.colorbar(pa, shrink=0.5, ax=ax)
-    plt.savefig(f"./plots/x-section.png")
+    filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
+    plt.savefig(f"./images/03_01_{filename}.png")
     plt.show()
 
-plot_plan(layer=1)
+
+plot_plan(layer=geolyr_subdivisions[0]-1)
+plot_plan(layer=geolyr_subdivisions[1]-1)
+
+lyr_index = sum(map(lambda b: b > well_bottom, bot))
+plot_plan(layer=lyr_index)
 plot_x_section(row=20)

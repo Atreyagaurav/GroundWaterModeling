@@ -142,6 +142,7 @@ plt.savefig("./images/tutorial-1.png")
   [[./images/tutorial-1.png]]
 
 * tutorial 2: Simple model
+Two edges of domain with constant head conditions.
 
   
 * Tutorial 3: Water withdrawal Controversy
@@ -152,3 +153,20 @@ plt.savefig("./images/tutorial-1.png")
 
   [[./images/tutorial-3-site.png]]
 
+* 4: model calibration
+https://www.magnet4water.net/ViewProblem.aspx?SubFolder=Documents/Curriculum/Projects/&PdfFileName=Calibration_ProblemStatement_VersionA_v6.pdf&Author=&Organization=Hydrosimulatics%20INC&Date=10/23/2020&Id=5
+
+
+EXample: https://github.com/Applied-Groundwater-Modeling-2nd-Ed/Chapter_9_and_10_problems/blob/master/p9_calibration.ipynb
+
+Plots examples:
+https://github.com/modflowpy/flopy/blob/develop/examples/Notebooks/flopy3.3_PlotMapView.ipynb
+  
+* 5: woburn site
+
+  https://www.magnet4water.net/ViewProblem.aspx?SubFolder=Documents/Curriculum/Projects/&PdfFileName=&Author=&Organization=Hydrosimulatics%20INC&Date=4/21/2020&Id=317
+
+  
+* Theis environmental moitoring and modeling site
+
+  Model to be provided from professor.

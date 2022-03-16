@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import flopy
 
 import numpy as np
@@ -90,7 +91,8 @@ def plot_x_section(**kwargs):
                               headwidth=3, headlength=4, width=2e-3,
                               pivot='mid', minshaft=2, hstep=4, scale=2,
                               color='blue')
-    plt.savefig(f"./images/01_01_{title_text.replace('; ', '_')}.png")
+    filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
+    plt.savefig(f"./images/01_01_{filename}.png")
     plt.show()
 
 
