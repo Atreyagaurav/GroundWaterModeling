@@ -3,10 +3,8 @@ import flopy
 import matplotlib.pyplot as plt
 import numpy as np
 
-from shapely import geometry
-from collections import namedtuple
-
-Rectangle = namedtuple("Rectangle", "x y w h")
+from src.utils import Rectangle, rect_2_poly
+from shapely.geometry import Point
 
 # Simulation parameters
 X0 = 0
@@ -35,16 +33,6 @@ xy_grid_points = np.mgrid[X0:XN+1:ΔX, Y0:YN+1:ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN+1, NC)
 
 
-def rect_2_poly(rect):
-    "Convert custom Rectangle data to shapely Polygon."
-    return geometry.Polygon([
-        (rect.x, rect.y),
-        (rect.x + rect.w, rect.y),
-        (rect.x + rect.w, rect.y + rect.h),
-        (rect.x, rect.y + rect.h),
-    ])
-
-
 domain = rect_2_poly(Rectangle(X0, Y0, XN, YN))
 river = rect_2_poly(Rectangle(300, 0, 850, YN))
 river_top = 10
@@ -56,7 +44,7 @@ stream_top = 10.5
 stream_height = 3.3
 stream_conductance = 1 * ΔX * ΔY  # leakance to conductance
 stream_bottom = stream_top - stream_height
-well = geometry.Point((5720, 2000))
+well = Point((5720, 2000))
 well_top = -150
 well_bottom = -160
 well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
@@ -82,12 +70,11 @@ def get_grid_points(shape, layers=None):
     for i, gp in enumerate(xy_grid_points):
         col = i // (NR+1)           # might have to swap these two.
         row = i % (NR+1)
-        pt = geometry.Point(gp[0], gp[1])
+        pt = Point(gp[0], gp[1])
         if shape.contains(pt):
             # layer, row, col
             for j in layers:
                 yield (j, row, col)
-
 
 
 # computational layers
@@ -97,7 +84,7 @@ lookup_table = np.concatenate(
          enumerate(geolyr_subdivisions)))
 
 # hetereogeiniety in 2nd geolayer
-layers_2nd = [i for i, v in enumerate(lookup_table) if v==1]
+layers_2nd = [i for i, v in enumerate(lookup_table) if v == 1]
 k_2nd_layer = np.ones(shape=(NR, NC))*3.0
 kv_2nd_layer = np.ones(shape=(NR, NC))*.01
 for cell in get_grid_points(river):
@@ -179,9 +166,7 @@ def get_well_stress_period():
 # plt.show()
 
 
-
 # MODELING STARTS FROM HERE:
-
 ws = './models/model-2'
 name = 'model-2'
 
