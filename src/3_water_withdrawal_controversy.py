@@ -3,8 +3,7 @@ import flopy
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.utils import Rectangle, rect_2_poly
-from shapely.geometry import Point
+from shapely import geometry
 
 # Simulation parameters
 X0 = 0
@@ -29,22 +28,22 @@ geolyr_subdivisions = [10, 4, 30]
 
 WELL_ON = True
 
-xy_grid_points = np.mgrid[X0:XN+1:ΔX, Y0:YN+1:ΔY].reshape(2, -1).T
-x_grids = np.linspace(X0, XN+1, NC)
+xy_grid_points = np.mgrid[X0:XN:ΔX, Y0:YN:ΔY].reshape(2, -1).T
+x_grids = np.linspace(X0, XN, NC)
 
 
-domain = rect_2_poly(Rectangle(X0, Y0, XN, YN))
-river = rect_2_poly(Rectangle(300, 0, 850, YN))
+domain = geometry.box(X0, Y0, XN, YN)
+river = geometry.box(300, 0, 300+850, YN)
 river_top = 10
 river_height = 25
 river_bottom = river_top - river_height
 river_conductance = 50 * ΔX * ΔY  # leakance to conductance
-stream = rect_2_poly(Rectangle(6150, 0, 270, YN))
+stream = geometry.box(6150, 0, 6150+270, YN)
 stream_top = 10.5
 stream_height = 3.3
 stream_conductance = 1 * ΔX * ΔY  # leakance to conductance
 stream_bottom = stream_top - stream_height
-well = Point((5720, 2000))
+well = geometry.Point((5720, 2000))
 well_top = -150
 well_bottom = -160
 well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
@@ -68,9 +67,9 @@ def get_grid_points(shape, layers=None):
     else:
         layers = list(layers)
     for i, gp in enumerate(xy_grid_points):
-        col = i // (NR+1)           # might have to swap these two.
-        row = i % (NR+1)
-        pt = Point(gp[0], gp[1])
+        col = i // (NR)           # might have to swap these two.
+        row = i % (NR)
+        pt = geometry.Point(gp[0], gp[1])
         if shape.contains(pt):
             # layer, row, col
             for j in layers:
@@ -153,22 +152,22 @@ def get_well_stress_period():
                 well_layers]}
 
 
-# sp = list(get_riv_stress_period())
+sp = list(get_chd_stress_period())
 
-# ipoints = np.ones((NLay, NR, NC))
-# for i, _ in sp:
-#     ipoints[i] = -1
-# x = [l[0][2] for l in sp]
-# y = [l[0][1] for l in sp]
+ipoints = np.ones((NLay, NR, NC))
+for i, _ in sp:
+    ipoints[i] = -1
+x = [l[0][2] for l in sp]
+y = [l[0][1] for l in sp]
 
 
-# plt.scatter(x, y)
-# plt.show()
+plt.scatter(x, y)
+plt.show()
 
 
 # MODELING STARTS FROM HERE:
-ws = './models/model-2'
-name = 'model-2'
+ws = './models/3_water_withdrawal_controversy'
+name = '3_water_wd'
 
 sim = flopy.mf6.MFSimulation(sim_name=name,
                              sim_ws=ws,
