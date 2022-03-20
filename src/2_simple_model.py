@@ -4,6 +4,14 @@ import flopy
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+def get_chd_stress_period():
+    for i in range(60):
+        yield ((0, i, 0), 3820)
+    for i in range(60):
+        yield ((0, i, 39), 3824)
+
+
 ws = './models/2_simple_model'
 name = '2_simple_model'
 
@@ -22,6 +30,10 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               top=3832,
                               botm=np.linspace(3832, 3600, 11)[1:])
 
+initial_head = np.ones((10, 60, 40)) * 3832
+for gp, head in get_chd_stress_period():
+    initial_head[gp] = head
+ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 ic = flopy.mf6.ModflowGwfic(gwf)
 
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=0.0055)
@@ -30,9 +42,7 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
                               save_specific_discharge=True)
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
-    stress_period_data=(
-        [((0, i, 0), 3820) for i in range(60)] +
-        [((0, i, 39), 3824) for i in range(60)]))
+    stress_period_data=list(get_chd_stress_period()))
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,

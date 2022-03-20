@@ -190,7 +190,8 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               top=Top,
                               botm=bot)
 
-ic = flopy.mf6.ModflowGwfic(gwf)
+initial_head = np.ones((NLay, NR, NC)) * Top
+ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=1/365)
 rivers = flopy.mf6.ModflowGwfriv(
