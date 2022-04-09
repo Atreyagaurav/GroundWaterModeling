@@ -79,10 +79,6 @@ def get_riv_conductance(intersect_length, riv_cond):
             / riverbed_thickness)
 
 
-# Calib data
-calib_wells = pd.read_csv("./data/4_wells.csv")
-
-
 def get_layers(top=Top, bottom=Bottom):
     all_layers = [(i, b) for i, b in enumerate(bot) if b < top]
     b = top
@@ -122,6 +118,14 @@ def get_grid_points(shape, /, xy_grid_points, layers=None):
         row = i % (NR)
         for j in layers:
             yield (j, row, col), xy_grid_points[i], insec
+
+
+# Calib data
+calib_wells = pd.read_csv("./data/4_wells.csv")
+calib_wells_grid_pts = list(calib_wells.apply(
+                lambda row: next(get_grid_points(
+                    geometry.Point(row.x, row.y),
+                    xy_grid_points=xy_grid_points))[0], axis=1))
 
 
 # computational layers
@@ -183,7 +187,7 @@ def get_well_stress_period():
 
 
 # CALIBRATION PARAMETERS
-for Kh in np.linspace(2.5, 3, 10):
+for Kh in np.linspace(2, 3, 16):
     lyr_k_hz = [Kh]
     lyr_k_vt = [Kh]
 
@@ -192,8 +196,8 @@ for Kh in np.linspace(2.5, 3, 10):
         k_hz[lay] = lyr_k_hz[geo_lay]
         k_vt[lay] = lyr_k_vt[geo_lay]
 
-    for riv_cond in np.logspace(math.log10(0.01), math.log10(1), 5):
-        for recharge in np.linspace(17, 18, 4):
+    for riv_cond in [.01, .1, .2, .5, 1.0]:
+        for recharge in np.linspace(16, 18, 4):
             ws = './models/4_calibration'
             name = '4_calibration'
 
@@ -264,9 +268,6 @@ for Kh in np.linspace(2.5, 3, 10):
 
             head_arr = gwf.output.head().get_data()
 
-            calib_wells_grid_pts = list(calib_wells.apply(
-                lambda row: (0, int((row.y-Y0)/ΔY), int((row.x-X0)/ΔX)), axis=1))
-
             model_heads = [head_arr[x] for x in calib_wells_grid_pts]
 
             # loop to make sure head is read from the cell within watertable
@@ -286,8 +287,8 @@ for Kh in np.linspace(2.5, 3, 10):
             rmse = math.sqrt(calib_wells.sq_err.sum())
             nse = 1 - calib_wells.sq_err.sum()/(calib_wells.h - calib_wells.h.mean()).map(lambda x: x**2).sum()
 
-            print(f'K={Kh}; RK={riv_cond}; RMSE={rmse}; NSE={nse}')
-            with open('./calib-trials-2.csv', 'a') as w:
+            print(f'K={Kh}; RK={riv_cond}; Rich={recharge}; RMSE={rmse}; NSE={nse}')
+            with open('./calib-trials-3.csv', 'a') as w:
                 w.write(f'{Kh},{riv_cond},{recharge},{rmse},{nse}\n')
             sim.remove_model(name)
             sim.delete_output_files()
