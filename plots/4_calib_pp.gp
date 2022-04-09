@@ -1,5 +1,5 @@
 set datafile separator ","
-calibdata="../calib-trials-2.csv"
+calibdata="../calib-trials-3.csv"
 
 set border 0
 unset key

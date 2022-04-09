@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+import math
 import flopy
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp2d
@@ -18,12 +20,12 @@ def csv_2_shape(csvfile, shape=geometry.Polygon):
 # Simulation parameters
 X0 = 0
 XN = 3000
-NC = 3000//30
+NC = 100
 ΔX = XN/NC
 
 Y0 = 0
 YN = 2230
-NR = 2230//30
+NR = 75
 ΔY = YN/NR
 
 
@@ -47,7 +49,9 @@ lake = csv_2_shape('./data/4_lake.csv', geometry.Polygon)
 lake_top = 0
 lake_height = Height
 lake_bottom = lake_top - lake_height
-lake_conductance = 50 * ΔX * ΔY  # leakance to conductance
+lake_bed_thickness = 1                               # m
+lake_conductance = 5 #* ΔX * ΔY / lake_bed_thickness  # leakance to conductance how?
+
 river_df = pd.read_csv('./data/4_river.csv')
 river = geometry.LineString([
         (row.x, row.y) for i, row in river_df.iterrows()])
@@ -58,7 +62,8 @@ get_river_head = interp2d(river_df.x,
 river_top = 0
 river_height = Height
 river_bottom = river_top - river_height
-river_conductance = 50 * ΔX * ΔY  # leakance to conductance
+river_width = 1
+riverbed_thickness = 1
 
 well1 = geometry.Point((2373.8920225624497, 1438.255033557047))
 # 2373.8920225624497,1438.255033557047
@@ -69,12 +74,18 @@ well1_bottom = Bottom
 well1_rate = -200 * 5.451  # GPM → m³/day
 
 # CALIBRATION PARAMETERS
-Kh = 12
-riv_cond = 30
-recharge = 17/365/12
+Kh = 4.48
+riv_cond = .01
+# between 10-18 inch/year
+Rch = 18                        # inch/year
+rech = Rch * 0.0254 / 365                  # m/day
 
-# Calib data
-calib_wells = pd.read_csv("./data/4_wells.csv")
+
+def get_riv_conductance(intersect_length):
+    "Give conductance based on river intersection on grid."
+    return (riv_cond *
+            intersect_length * river_width / (ΔX*ΔY)  # factor of area covered
+            / riverbed_thickness)
 
 
 def get_layers(top=Top, bottom=Bottom):
@@ -102,19 +113,29 @@ def get_grid_points(shape, /, xy_grid_points, layers=None):
                             xy_grid_points))
 
     if isinstance(shape, geometry.Polygon):
-        points = filter(lambda gp: shape.contains(gp[1]), grid_pts)
+        points = filter(lambda gp: shape.contains(gp[1]), grid_boxes)
+        points = map(lambda gp: (gp[0], shape.intersection(gp[1]).area), points)
     elif isinstance(shape, geometry.Point):
         nearest = min(grid_pts, key=lambda gp: shape.distance(gp[1]))
-        points = [nearest]
+        points = [(nearest[0], nearest[1].area)]
     elif isinstance(shape, geometry.LineString):
         points = filter(lambda gp: shape.intersects(gp[1]), grid_boxes)
+        points = map(lambda gp: (gp[0], shape.intersection(gp[1]).length), points)
 
-    for i, _ in points:
+    for i, insec in points:
         col = i // (NR)
         row = i % (NR)
         for j in layers:
-            yield (j, row, col), xy_grid_points[i]
+            yield (j, row, col), xy_grid_points[i], insec
 
+
+
+# Calib data
+calib_wells = pd.read_csv("./data/4_wells.csv")
+calib_wells_grid_pts = list(calib_wells.apply(
+                lambda row: next(get_grid_points(
+                    geometry.Point(row.x, row.y),
+                    xy_grid_points=xy_grid_points))[0], axis=1))
 
 # computational layers
 NLay = sum(geolyr_subdivisions)
@@ -141,31 +162,25 @@ for lay in range(NLay):
 
 def get_riv_stress_period():
     "gives the stress_period_data on the grid_points for river grids."
-    for grid_pt, pt in get_grid_points(river, xy_grid_points=xy_grid_points):
+    for grid_pt, pt, length in get_grid_points(river, xy_grid_points=xy_grid_points):
         # cellid, stage, cond, rbot, aux, boundname
         stage = get_river_head(pt[0], pt[1])[0]
         rbot = stage-1
         lyrs = get_layers(stage, rbot)
         for l, t, b in lyrs:
-            yield ((l, grid_pt[1], grid_pt[2]), stage, riv_cond, b)
-
-    # LAKE as river? or should I add it as lake.
-    # layers_tuple = list(get_layers(top=lake_top, bottom=lake_bottom))
-    # for grid_pt, _ in get_grid_points(lake, xy_grid_points=xy_grid_points):
-    #     for lay, thk, bottom in layers_tuple:
-    #         # cellid, head
-    #         yield ((lay, grid_pt[1], grid_pt[2]), lake_top, 2, bottom)
+            yield ((l, grid_pt[1], grid_pt[2]), stage,
+                   get_riv_conductance(length), b)
 
 
 def get_chd_stress_period():
     "gives the stress_period_data on the grid_points for constant head points."
     layers_tuple = list(get_layers(top=lake_top, bottom=lake_bottom))
-    for grid_pt, _ in get_grid_points(lake, xy_grid_points=xy_grid_points):
+    for grid_pt, _, _ in get_grid_points(lake, xy_grid_points=xy_grid_points):
         for lay, thk, bottom in layers_tuple:
             # cellid, head
             yield ((lay, grid_pt[1], grid_pt[2]), lake_top)
 
-    for grid_pt, pt in get_grid_points(river, xy_grid_points=xy_grid_points):
+    for grid_pt, pt, _ in get_grid_points(river, xy_grid_points=xy_grid_points):
         # cellid, head
         stage = get_river_head(pt[0], pt[1])[0]
         rbot = stage-1
@@ -180,16 +195,21 @@ def get_well_stress_period():
     well_pts = get_grid_points(well1, xy_grid_points=xy_grid_points,
                                layers=well1_layers)
     rate = well1_rate/len(well1_layers)
-    return {0: [(wpt, rate) for wpt, _ in well_pts]}
+    return {0: [(wpt, rate) for wpt, _, _ in well_pts]}
 
 
+
+#  TO plot the heads
 # sp = list(get_chd_stress_period())
 
 # x = [l[0][2] for l in sp]+[0]
 # y = [l[0][1] for l in sp]+[0]
+# c = [l[1] for l in sp] + [None]
 
-
-# plt.scatter(x, y)
+# plt.scatter(x, y, c=c)
+# plt.xlim(left=0, right=NC)
+# plt.ylim(bottom=0, top=NR)
+# plt.colorbar()
 # plt.show()
 
 
@@ -209,7 +229,7 @@ gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 dis = flopy.mf6.ModflowGwfdis(gwf,
                               # nogrb=True,
                               # idomain=ipoints,
-                              length_units='FEET',
+                              length_units='METERS',
                               nlay=NLay,
                               nrow=NR,
                               ncol=NC,
@@ -221,14 +241,23 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
 initial_head = np.ones((NLay, NR, NC)) * Top
 for gp, head in get_chd_stress_period():
     initial_head[gp] = head
+
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 
-recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=recharge)
+recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
+
+
+k_vt_new = np.ones(shape=(NLay, NR, NC))*Kh
+
+# for gp, _ in get_chd_stress_period():
+#     k_vt_new[gp] = lake_conductance
+for gp, _, cond, _ in get_riv_stress_period():
+    k_vt_new[gp] = cond
 
 npf = flopy.mf6.ModflowGwfnpf(gwf,
                               icelltype=1,
                               k=k_hz,
-                              k33=k_vt,
+                              k33=k_vt_new,
                               save_specific_discharge=True)
 
 chd = flopy.mf6.ModflowGwfchd(
@@ -238,6 +267,10 @@ chd = flopy.mf6.ModflowGwfchd(
 rivers = flopy.mf6.ModflowGwfriv(
     gwf,
     stress_period_data=list(get_riv_stress_period()))
+
+# flopy.mf6.ModflowGwfdrn(
+#     gwf,
+#     stress_period_data=list(get_drn_stress_period()))
 
 
 wells = flopy.mf6.ModflowGwfwel(
@@ -266,81 +299,6 @@ spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
 
-def plot_plan(calib_wells=None, layer=0):
-    fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
-    ax.set_title(f'Layer-{layer}')
-    pmv = flopy.plot.PlotMapView(gwf, ax=ax)
-    pmv.plot_array(head_arr[layer])
-    pmv.plot_grid(colors='white', linewidths=0.3)
-    contours = pmv.contour_array(head_arr[layer],
-                                 levels=np.arange(0, 100, 1),
-                                 linewidths=1.,
-                                 colors='black')
-    ax.clabel(contours, fmt="%.0f")
-    pmv.contour_array(head_arr[layer],
-                      levels=np.arange(0, 100, .2),
-                      linewidths=.4,
-                      colors='black')
-    # flopy.plot.styles.graph_legend()
-    pmv.plot_vector(qx[layer, :, :], qy[layer, :, :],
-                    headwidth=3, headlength=4, width=1.4e-3, scale=20,
-                    normalize=False, istep=10, jstep=10, color="white")
-    shps= pmv.plot_shapefile('./data/4_river',
-                             edgecolor='red',
-                             linewidth=2)
-    # ax.plot([x for x, y in river.coords],
-    #         [y for x, y in river.coords],
-    #         color='red',
-    #         linewidth=2)
-    # if isinstance(calib_wells, pd.
-    ax.scatter(calib_wells.x, calib_wells.y,
-               s=calib_wells.pt_size,
-               c=calib_wells.pt_color)
-    plt.savefig(f"./images/03_00_plan_layer-{layer}.png")
-    plt.show()
-
-
-def plot_x_section(**kwargs):
-    fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
-    # first subplot
-    title_text = "; ".join((f'{k}={v}' for k, v in kwargs.items()))
-    ax.set_title(f"X-Section ({title_text})")
-    modelmap = flopy.plot.PlotCrossSection(
-        model=gwf,
-        ax=ax,
-        line=kwargs,
-    )
-    k_values = npf.k.get_data()
-    pa = modelmap.plot_array(k_values, alpha=0.6)
-    quadmesh = modelmap.plot_bc("CHD")
-    linecollection = modelmap.plot_grid(lw=0.2, color="white")
-    minor_contours = modelmap.contour_array(
-        head_arr,
-        levels=np.arange(0, 100, .2),
-        linewidths=0.4,
-        colors='black'
-    )
-    contours = modelmap.contour_array(
-        head_arr,
-        levels=np.arange(0, 100, 1),
-        linewidths=0.8,
-        colors='black'
-    )
-    ax.clabel(contours, fmt="%.0f")
-    pv = modelmap.plot_vector(qx, qy, qz,
-                              headwidth=3, headlength=4, width=1e-3,
-                              pivot='mid', minshaft=2, hstep=4,
-                              scale=10, linewidths=0.1,
-                              color='blue')
-    # plt.colorbar(pa, shrink=0.5, ax=ax)
-    filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
-    plt.savefig(f"./images/03_01_{filename}.png")
-    plt.show()
-
-
-calib_wells_grid_pts = list(calib_wells.apply(
-    lambda row: (0, int((row.y-Y0)/ΔY), int((row.x-X0)/ΔX)), axis=1))
-
 model_heads = map(lambda x: head_arr[x], calib_wells_grid_pts)
 
 # loop to make sure head is read from the cell within watertable
@@ -351,15 +309,52 @@ while any(map(lambda x: x<0, model_heads)):
 
 calib_wells.loc[:, 'model_h'] = pd.Series(model_heads)
 calib_wells.loc[:, 'err'] = calib_wells.model_h - calib_wells.h
-calib_wells.loc[:, 'pt_size'] = calib_wells.err.map(lambda x: x*x)
+calib_wells.loc[:, 'sq_err'] = calib_wells.err * calib_wells.err
+calib_wells.loc[:, 'pt_size'] = calib_wells.err.map(lambda x: x)
 calib_wells.loc[:, 'pt_color'] = calib_wells.err.map(lambda x: 'red' if x>0 else 'blue')
 
+rmse = math.sqrt(calib_wells.sq_err.sum())
+nse = 1 - calib_wells.sq_err.sum()/(calib_wells.h - calib_wells.h.mean()).map(lambda x: x**2).sum()
 
-plot_plan(layer=NLay//2, calib_wells=calib_wells)
+print(f'Rch={Rch} inch/year; K={Kh} m/day; RK={riv_cond} ; RMSE={rmse}; NSE={nse}')
 
-plt.scatter(calib_wells.h, calib_wells.model_h)
+
+# plots start here
+gs = gs = gridspec.GridSpec(1, 5)
+fig = plt.figure(constrained_layout=True)
+ax1 = fig.add_subplot(gs[0, :4])
+
+
+layer = 20
+ax1.set_title(f'Layer-{layer}')
+pmv = flopy.plot.PlotMapView(gwf, ax=ax1)
+pmv.plot_array(head_arr[layer])
+pmv.plot_grid(colors='white', linewidths=0.3)
+# pmv.plot_bc('CHD')
+contours = pmv.contour_array(head_arr[layer],
+                             levels=np.arange(0, 100, 1),
+                             linewidths=1.,
+                             colors='black')
+ax1.clabel(contours, fmt="%.0f")
+pmv.contour_array(head_arr[layer],
+                  levels=np.arange(0, 100, .2),
+                  linewidths=.4,
+                  colors='black')
+# flopy.plot.styles.graph_legend()
+pmv.plot_vector(qx[layer, :, :], qy[layer, :, :],
+                headwidth=3, headlength=4, width=1.4e-3, scale=20,
+                normalize=False, istep=10, jstep=10, color="white")
+shps= pmv.plot_shapefile('./data/4_river',
+                         edgecolor='red',
+                         linewidth=2)
+
+ax1.scatter(calib_wells.x, calib_wells.y,
+           s=calib_wells.pt_size,
+           c=calib_wells.pt_color)
+
+
+ax2 = fig.add_subplot(gs[0, 4])
+ax2.scatter(calib_wells.h, calib_wells.model_h, c=calib_wells.pt_color)
 max_h = max(calib_wells.h.max(), calib_wells.model_h.max())
-plt.plot([0,max_h],[0,max_h])
+plt.plot([0, max_h], [0, max_h])
 plt.show()
-# well_gp,_ = next(get_grid_points(well1, xy_grid_points=xy_grid_points))
-# plot_x_section(row=well_gp[1])
