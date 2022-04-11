@@ -1,43 +1,151 @@
-#!/usr/bin/env python
+* Github model
+
+Link: https://github.com/modflowpy/flopy
+** Introduction
+This model is very basic model on a simple grid to show what flopy can do, and be familiar with the functions and classes in flopy.
+
+
+First Let's load libraries, flopy is the flopy library and matplotlib is for plotting the plots, flopy also uses this internally for the plots.
+
+#+BEGIN_SRC python
 import flopy
 import matplotlib.pyplot as plt
+#+END_SRC
 
+
+
+We also need to define the working directories flopy will save the modflow model in that directory with given name. Here we also give the exe_name which is the modflow executable to be called for simulation.
+
+#+BEGIN_SRC python
 ws = './models/01_github_example/'
-name = '01_github_example'
+name = '01_git_ex'
 sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name='modflow-mf6')
+#+END_SRC
 
+#+RESULTS[af05599f87787ee4f40570b25280d41a7660ee7b]:
+#+begin_src text
+#+end_src
+
+
+After we have a simulation object, we can add more packages. Here tdis package is for time descretization we're using the default values as we don't have timesteps.
+
+I don't know what ims package does.
+
+gwf is groundwaterflow package.
+#+BEGIN_SRC python
 tdis = flopy.mf6.ModflowTdis(sim)
 ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+#+END_SRC
 
+#+RESULTS[59ef8bc55b6ec4822ef3415e34b39eb11017f76e]:
+#+begin_src text
+#+end_src
+
+
+Here we define descretization package which will take number of rows and columns and make a grid internally.
+We're using 10x10 grids.
+
+#+BEGIN_SRC python
 dis = flopy.mf6.ModflowGwfdis(gwf, nrow=10, ncol=10)
 ic = flopy.mf6.ModflowGwfic(gwf)
 npf = flopy.mf6.ModflowGwfnpf(gwf, save_specific_discharge=True)
+#+END_SRC
+
+#+RESULTS[0ea51171170d9c7b5ef14843bacba2e5bf55471e]:
+#+begin_src text
+#+end_src
+
+
+Now we can use chd package which is used for constant head conditions, we have assigned two points with heads 1 and zero we we can see the flow from higher head to lower.
+
+#+BEGIN_SRC python
 chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=[[(0, 0, 0), 1.],
                                                        [(0, 9, 9), 0.]])
+#+END_SRC
 
+#+RESULTS[d59ac1381717f606b5de143858af1e35e339e36a]:
+#+begin_src text
+#+end_src
+
+#+end_src
+
+
+Now the oc package will be used to give the filenames for where the results will be saved. We can load these files directly and use the data next time if running model everytime is troublesome.
+
+#+BEGIN_SRC python
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,
                             budget_filerecord=budget_file,
                             head_filerecord=head_file,
                             saverecord=[('HEAD', 'ALL'), ('BUDGET', 'ALL')])
+#+END_SRC
 
+#+RESULTS[ebe344c02f023b4702ca3f62d4476a384d468ab3]:
+#+begin_src text
+#+end_src
+
+
+
+After we have all the packages we use ~write_simulation()~ function to write the files for the simulation that will be used my modflow when we use ~run_simulation()~.
+#+BEGIN_SRC python
 sim.write_simulation()
 sim.run_simulation()
+#+END_SRC
+
+#+RESULTS[d5efa5c41041b6f0c35d1df0663296722ca2915e]:
+#+begin_src text
+| True | nil |
+#+end_src
 
 
+
+
+We can extract the values from the model. We can also extract them using the output files we saved using oc package.
+
+#+BEGIN_SRC python
 head = gwf.output.head().get_data()
 bud = gwf.output.budget()
+#+END_SRC
 
+#+RESULTS[b9af56fa13d4cebb782f1104c9d7de83871e5b40]:
+#+begin_src text
+#+end_src
+
+Above data are loaded from binary files and are quite hard to read, so we're going to use postprocessing tools to get the data we want. Let's get the specific discharge values so we can use them to plot arrows in the plan to show the direction of flow.
+
+#+BEGIN_SRC python
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+#+END_SRC
 
+#+RESULTS[7139ece9c081b80fd8fc0a4ae79b3d38f02e86a4]:
+#+begin_src text
+#+end_src
+
+Now we can use the model information's and the output to make plots. 
+#+BEGIN_SRC python
 pmv = flopy.plot.PlotMapView(gwf)
 pmv.plot_array(head)
 pmv.plot_grid(colors='white')
 pmv.contour_array(head, levels=[.2, .4, .6, .8], linewidths=3.)
 pmv.plot_vector(qx, qy, normalize=True, color="white")
+#+END_SRC
 
+#+RESULTS[b70a21c0f4bd5d33c61f5f36fce1ec37f0a55596]:
+#+begin_src text
+<matplotlib.quiver.Quiver object at 0x7f332cf8ccd0>
+#+end_src
 
-plt.savefig("./images/01_00_plan.png")
+If you want to save the figure use this. You can save png or pdf. 
+#+BEGIN_SRC python
+plt.savefig("./images/1_results_plan.pdf")
+#+END_SRC
+
+#+RESULTS[32ddf1c307f0a3d6ffc89a13ca1a8a194f518c1b]:
+#+begin_src text
+None
+#+end_src
+
+[[./images/1_results_plan.pdf]]

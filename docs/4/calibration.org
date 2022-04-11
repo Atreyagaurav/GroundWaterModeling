@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+
+#+BEGIN_SRC python
 import math
 import flopy
 import matplotlib.pyplot as plt
@@ -8,16 +9,30 @@ import pandas as pd
 from scipy.interpolate import interp2d
 
 from shapely import geometry
+#+END_SRC
+
+#+RESULTS[9921e251b93f011e1801a25c66db52e264de6882]:
+#+begin_src text
+#+end_src
 
 
-# Utils functions
+
+Utils functions
+#+BEGIN_SRC python
 def csv_2_shape(csvfile, shape=geometry.Polygon):
     df = pd.read_csv(csvfile)
     return shape([
         (row.x, row.y) for i, row in df.iterrows()])
+#+END_SRC
+
+#+RESULTS[971c6b2dbd2636881cc673726bf71ecce66a5f8a]:
+#+begin_src text
+#+end_src
 
 
-# Simulation parameters
+
+Simulation parameters
+#+BEGIN_SRC python
 X0 = 0
 XN = 3000
 NC = 100
@@ -32,18 +47,46 @@ NR = 75
 Top = 3                         # m
 Height = 100*0.3048
 Bottom = Top-Height
+#+END_SRC
 
-# geo layers
+#+RESULTS[c71b28474351272607ba57f2dab850e18d3547a2]:
+#+begin_src text
+#+end_src
+
+
+geo layers
+#+BEGIN_SRC python
 geolyr_thickness = [Height]
 geolyr_subdivisions = [50]
+#+END_SRC
+
+#+RESULTS[bed195a74c913588f832f24eef0223ff514df16b]:
+#+begin_src text
+#+end_src
 
 
+
+#+BEGIN_SRC python
 SECOND_WELL_ON = False
+#+END_SRC
 
+#+RESULTS[d5aa2edc37415473b159bb32ac044f5e0ee151e4]:
+#+begin_src text
+#+end_src
+
+
+#+BEGIN_SRC python
 xy_grid_points = np.mgrid[X0:XN:ΔX, YN:Y0:-ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN+1, NC)
+#+END_SRC
+
+#+RESULTS[66507c62c220e7c0596a590c142eab533b717f3b]:
+#+begin_src text
+#+end_src
 
 
+
+#+BEGIN_SRC python
 domain = geometry.box(X0, Y0, XN, YN)
 lake = csv_2_shape('./data/4_lake.csv', geometry.Polygon)
 lake_top = 0
@@ -51,7 +94,15 @@ lake_height = Height
 lake_bottom = lake_top - lake_height
 lake_bed_thickness = 1                               # m
 lake_conductance = 5 #* ΔX * ΔY / lake_bed_thickness  # leakance to conductance how?
+#+END_SRC
 
+#+RESULTS[14ffecc828b738158659d9f8118c8489649b4d6b]:
+#+begin_src text
+#+end_src
+
+
+
+#+BEGIN_SRC python
 river_df = pd.read_csv('./data/4_river.csv')
 river = geometry.LineString([
         (row.x, row.y) for i, row in river_df.iterrows()])
@@ -59,12 +110,25 @@ get_river_head = interp2d(river_df.x,
                            river_df.y,
                            river_df.h,
                            kind='linear')
+#+END_SRC
+
+#+RESULTS[75b94505e8f630d07caa122ad1d4803152fecc12]:
+#+begin_src text
+#+end_src
+
+#+BEGIN_SRC python
 river_top = 0
 river_height = Height
 river_bottom = river_top - river_height
 river_width = 1
 riverbed_thickness = 1
+#+END_SRC
 
+#+RESULTS[67aa26fafbf643fdd9f8804a4d8d07c2878ab24e]:
+#+begin_src text
+#+end_src
+
+#+BEGIN_SRC python
 well1 = geometry.Point((2373.8920225624497, 1438.255033557047))
 well1_top = 0
 well1_bottom = Bottom
@@ -74,23 +138,42 @@ well2 = geometry.Point((1871.071716357776, 1030.7494407158838))
 well2_top = 0
 well2_bottom = Bottom
 well2_rate = -250 * 5.451  # GPM → m³/day
+#+END_SRC
+
+#+RESULTS[7923e158c67e86a4c84b91e5691548b05a37c488]:
+#+begin_src text
+#+end_src
 
 
-# CALIBRATION PARAMETERS
+CALIBRATION PARAMETERS
+
+#+BEGIN_SRC python
 Kh = 4.48
 riv_cond = .01
 # between 10-18 inch/year
 Rch = 18                        # inch/year
 rech = Rch * 0.0254 / 365                  # m/day
+#+END_SRC
+
+#+RESULTS[b9aca6cc10d14b51061166e4f44cf1dcb0634bed]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 def get_riv_conductance(intersect_length):
     "Give conductance based on river intersection on grid."
     return (riv_cond *
             intersect_length * river_width / (ΔX*ΔY)  # factor of area covered
             / riverbed_thickness)
+#+END_SRC
+
+#+RESULTS[b77d5ef065d4899adb8c933ec65c2137faa41e6a]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 def get_layers(top=Top, bottom=Bottom):
     all_layers = [(i, b) for i, b in enumerate(bot) if b < top]
     b = top
@@ -102,8 +185,14 @@ def get_layers(top=Top, bottom=Bottom):
         top = b
     if b <= bottom:
         yield i, top, bottom
+#+END_SRC
+
+#+RESULTS[dd1fa35728e298d5dbf29521fad151e3a7149bba]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 def get_grid_points(shape, /, xy_grid_points, layers=None):
     if not layers:
         layers = [0]
@@ -130,17 +219,54 @@ def get_grid_points(shape, /, xy_grid_points, layers=None):
         row = i % (NR)
         for j in layers:
             yield (j, row, col), xy_grid_points[i], insec
+#+END_SRC
+
+#+RESULTS[733b75e9438536d1c247104d25e585f92d7675f4]:
+#+begin_src text
+#+end_src
 
 
 
-# Calib data
+Calib data
+#+BEGIN_SRC python
 calib_wells = pd.read_csv("./data/4_wells.csv")
 calib_wells_grid_pts = list(calib_wells.apply(
                 lambda row: next(get_grid_points(
                     geometry.Point(row.x, row.y),
                     xy_grid_points=xy_grid_points))[0], axis=1))
+#+END_SRC
 
-# computational layers
+
+#+BEGIN_SRC python
+calib_wells.head()
+#+END_SRC
+
+#+RESULTS[460b3a8675527b1e619e3b827d55339216a5711f]:
+#+begin_src text
+   well            x            y      h   weight
+0     1  1138.014528  1776.654749  12.10        1
+1     2   571.428571   766.212291  14.95        1
+2     3   479.418886  1896.375419  14.79        1
+3     4  1452.784504   680.013408  12.14        1
+4     5   479.418886   713.535196  15.13        1
+#+end_src
+
+#+BEGIN_SRC python
+calib_wells_grid_pts[:5]
+#+END_SRC
+
+#+RESULTS[b5b395cfd53e521d3e122b2be16b72c82fd62fb0]:
+#+begin_src text
+| 0 | 15 | 38 |
+| 0 | 49 | 19 |
+| 0 | 11 | 16 |
+| 0 | 52 | 48 |
+| 0 | 51 | 16 |
+#+end_src
+
+
+computational layers
+#+BEGIN_SRC python
 NLay = sum(geolyr_subdivisions)
 lookup_table = np.concatenate(
     list(np.ones(s, dtype=int)*i for i, s in
@@ -148,21 +274,39 @@ lookup_table = np.concatenate(
 
 lyr_k_hz = [Kh]
 lyr_k_vt = [Kh]
+#+END_SRC
+
+#+RESULTS[a9c37fa9729d0540f085edb4c6de0a8267daca64]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 thickness = np.zeros(NLay)
 k_hz = [0 for i in range(NLay)]
 k_vt = [0 for i in range(NLay)]
 bot = np.ones(NLay)
+#+END_SRC
 
+#+RESULTS[98ff10c1068cb7013527d6077ba131f4bf671534]:
+#+begin_src text
+#+end_src
+
+#+BEGIN_SRC python
 for lay in range(NLay):
     geo_lay = lookup_table[lay]
     thickness[lay] = geolyr_thickness[geo_lay]/geolyr_subdivisions[geo_lay]
     k_hz[lay] = lyr_k_hz[geo_lay]
     k_vt[lay] = lyr_k_vt[geo_lay]
     bot[lay] = Top-sum(thickness)
+#+END_SRC
+
+#+RESULTS[c7a64d30a70803599677f275addf685e46d86358]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 def get_riv_stress_period():
     "gives the stress_period_data on the grid_points for river grids."
     for grid_pt, pt, length in get_grid_points(river, xy_grid_points=xy_grid_points):
@@ -173,8 +317,14 @@ def get_riv_stress_period():
         for l, t, b in lyrs:
             yield ((l, grid_pt[1], grid_pt[2]), stage,
                    get_riv_conductance(length), b)
+#+END_SRC
+
+#+RESULTS[5a3b6fe313b83f7cb9aa4bdf3aeb91c6b68ed316]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 def get_chd_stress_period():
     "gives the stress_period_data on the grid_points for constant head points."
     layers_tuple = list(get_layers(top=lake_top, bottom=lake_bottom))
@@ -190,8 +340,14 @@ def get_chd_stress_period():
         lyrs = get_layers(stage, rbot)
         for l, t, b in lyrs:
             yield ((l, grid_pt[1], grid_pt[2]), stage)
+#+END_SRC
+
+#+RESULTS[f86be87936b5db07ac84e4d6abce796b553b6a10]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 def get_well_stress_period():
     # temp fix
     well1_layers = [l[0] for l in get_layers(well1_top, well1_bottom)]
@@ -206,39 +362,58 @@ def get_well_stress_period():
         rate2 = well2_rate/len(well2_layers)
         spd += [(wpt, rate2) for wpt, _, _ in well2_pts]
     return {0: spd}
+#+END_SRC
+
+#+RESULTS[dadec8c15d9198e32d17251f86a6a2152969e92a]:
+#+begin_src text
+#+end_src
 
 
 
-#  TO plot the heads
+TO plot the heads
+#+BEGIN_SRC python
 sp = list(get_chd_stress_period())
 
 x = [l[0][2] for l in sp]+[0]
 y = [l[0][1] for l in sp]+[0]
 c = [l[1] for l in sp] + [None]
+#+END_SRC
 
+#+RESULTS[74d6d9b117694732386153a76476b325ee5ffda6]:
+#+begin_src text
+#+end_src
+
+#+BEGIN_SRC python
 plt.scatter(x, y, c=c)
 plt.xlim(left=0, right=NC)
 plt.ylim(bottom=NR, top=0)
 plt.colorbar()
+filename="./images/4_calib_input.pdf"
+plt.savefig(filename)
 plt.show()
+#+END_SRC
 
+[[./images/4_calib_input.pdf]]
 
-# MODELING STARTS FROM HERE:
+MODELING STARTS FROM HERE:
+#+BEGIN_SRC python
 ws = './models/4_calibration'
 name = '4_calibration'
 
 sim = flopy.mf6.MFSimulation(sim_name=name,
                              sim_ws=ws,
                              exe_name='modflow-mf6')
+#+END_SRC
 
+#+BEGIN_SRC python
 tdis = flopy.mf6.ModflowTdis(sim,
                              time_units='days')
 ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+#+END_SRC
 
+#+BEGIN_SRC python
 dis = flopy.mf6.ModflowGwfdis(gwf,
-                              # nogrb=True,
-                              # idomain=ipoints,
                               length_units='METERS',
                               nlay=NLay,
                               nrow=NR,
@@ -247,46 +422,62 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               delr=ΔY,
                               top=Top,
                               botm=bot)
+#+END_SRC
 
+#+BEGIN_SRC python
 initial_head = np.ones((NLay, NR, NC)) * Top
 for gp, head in get_chd_stress_period():
     initial_head[gp] = head
 
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
+#+END_SRC
 
+#+BEGIN_SRC python
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=rech)
+#+END_SRC
 
 
+#+BEGIN_SRC python
 k_vt_new = np.ones(shape=(NLay, NR, NC))*Kh
 
-# for gp, _ in get_chd_stress_period():
-#     k_vt_new[gp] = lake_conductance
 for gp, _, cond, _ in get_riv_stress_period():
     k_vt_new[gp] = cond
+#+END_SRC
 
+#+BEGIN_SRC python
 npf = flopy.mf6.ModflowGwfnpf(gwf,
                               icelltype=1,
                               k=k_hz,
                               k33=k_vt_new,
                               save_specific_discharge=True)
+#+END_SRC
 
+#+BEGIN_SRC python
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
+#+END_SRC
 
+#+BEGIN_SRC python
 rivers = flopy.mf6.ModflowGwfriv(
     gwf,
     stress_period_data=list(get_riv_stress_period()))
+#+END_SRC
 
+#+BEGIN_SRC python
 # flopy.mf6.ModflowGwfdrn(
 #     gwf,
 #     stress_period_data=list(get_drn_stress_period()))
+#+END_SRC
 
 
+#+BEGIN_SRC python
 wells = flopy.mf6.ModflowGwfwel(
     gwf,
     stress_period_data=get_well_stress_period())
+#+END_SRC
 
+#+BEGIN_SRC python
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -294,44 +485,57 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
                             head_filerecord=head_file,
                             saverecord=[('HEAD', 'ALL'),
                                         ('BUDGET', 'ALL')])
+#+END_SRC
+
+
+#+BEGIN_SRC python
 sim.write_simulation()
 result, _ = sim.run_simulation()
 
 if not result:
     print("Error in Simulation")
     exit(1)
+#+END_SRC
 
+#+BEGIN_SRC python
 head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
+#+END_SRC
 
+
+#+BEGIN_SRC python
 watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
-
-
-
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+#+END_SRC
 
 
+#+BEGIN_SRC python
 model_heads = map(lambda x: watertable[(x[1], x[2])], calib_wells_grid_pts)
+#+END_SRC
 
-
+#+BEGIN_SRC python
 calib_wells.loc[:, 'model_h'] = pd.Series(model_heads)
 calib_wells.loc[:, 'err'] = calib_wells.model_h - calib_wells.h
 calib_wells.loc[:, 'sq_err'] = calib_wells.err * calib_wells.err
 calib_wells.loc[:, 'pt_size'] = calib_wells.err.map(lambda x: abs(x))
 calib_wells.loc[:, 'pt_color'] = calib_wells.err.map(lambda x: 'red' if x>0 else 'blue')
+#+END_SRC
 
+#+BEGIN_SRC python
 rmse = math.sqrt(calib_wells.sq_err.sum())
 nse = 1 - calib_wells.sq_err.sum()/(calib_wells.h - calib_wells.h.mean()).map(lambda x: x**2).sum()
 
 print(f'Rch={Rch} inch/year; K={Kh} m/day; RK={riv_cond} ; RMSE={rmse}; NSE={nse}')
+#+END_SRC
 
 
-# plots start here
+plots start here
+
+#+BEGIN_SRC python
 gs = gs = gridspec.GridSpec(1, 5)
 fig = plt.figure(constrained_layout=True)
 ax1 = fig.add_subplot(gs[0, :4])
-
 
 ax1.set_title('Water Table')
 pmv = flopy.plot.PlotMapView(gwf, ax=ax1)
@@ -362,3 +566,4 @@ max_h = max(calib_wells.h.max(), calib_wells.model_h.max())
 plt.plot([0, max_h], [0, max_h])
 fig.tight_layout()
 plt.show()
+#+END_SRC

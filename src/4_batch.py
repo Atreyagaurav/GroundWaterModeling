@@ -273,9 +273,9 @@ for Kh in np.linspace(2, 3, 16):
             # loop to make sure head is read from the cell within watertable
             i = 1
             while any(map(lambda x: x<0, model_heads)):
-                model_heads = list(map(lambda x: head_arr[(i, x[1], x[2])], calib_wells_grid_pts))
                 if i>=50:
                     break
+                model_heads = list(map(lambda x: head_arr[(i, x[1], x[2])], calib_wells_grid_pts))
                 i = i+1
 
             calib_wells.loc[:, 'model_h'] = pd.Series(model_heads)

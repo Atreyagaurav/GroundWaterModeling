@@ -1,26 +1,63 @@
-#!/usr/bin/env python
+* Simple model
+
+Introduction: There are two drains in this model, and there is constant recharge that'll travel through the model to those drains and we're going to model it and see the water table and such.
+
+
+Importing the libraries, here numpy is imported to use its functions which are really good with numbers.
+#+BEGIN_SRC python
 import flopy
 
 import numpy as np
 import matplotlib.pyplot as plt
+#+END_SRC
+
+#+RESULTS[3faecfa5e89c46477935de64d3403ef2ebf86c3b]:
+#+begin_src text
+#+end_src
 
 
+Let's define a function which will loop through the grids at the edge and return the grid id as well as heads at those grids for the chd package.
+
+#+BEGIN_SRC python
 def get_chd_stress_period():
     for i in range(60):
         yield ((0, i, 0), 3820)
     for i in range(60):
         yield ((0, i, 39), 3824)
+#+END_SRC
+
+#+RESULTS[1b2b2e41a65a82f9701808b15a6910e2357fe29b]:
+#+begin_src text
+#+end_src
 
 
+Here we'll define the working directory, model name and the executable for modflow.
+
+#+BEGIN_SRC python
 ws = './models/2_simple_model'
 name = '2_simple_model'
 
 sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name='modflow-mf6')
+#+END_SRC
 
+#+RESULTS[1b14a4fbe22b8abe4917212eaca61d110c6106e7]:
+#+begin_src text
+#+end_src
+
+
+Let's define the packages like in other model.
+#+BEGIN_SRC python
 tdis = flopy.mf6.ModflowTdis(sim)
 ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
+#+END_SRC
 
+#+RESULTS[59ef8bc55b6ec4822ef3415e34b39eb11017f76e]:
+#+begin_src text
+#+end_src
+
+Here in dis package we're going to define the grid, let's use 60x40 grid will 50m spacing in between. And 10 vertical layers. The ~botm~ parameter needs the bottom elevation of the layers, we'll use numpy to generate a uniformly spaced intervals from it.
+#+BEGIN_SRC python
 dis = flopy.mf6.ModflowGwfdis(gwf,
                               nlay=10,
                               nrow=60,
@@ -29,48 +66,123 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               delr=50,
                               top=3832,
                               botm=np.linspace(3832, 3600, 11)[1:])
+#+END_SRC
 
+#+RESULTS[99691f721133bc97c7684d873ffb9c9455cf6303]:
+#+begin_src text
+#+end_src
+
+For the initial head using the top elevation is a good idea, so we'll do that. ~np.ones~ will give us a grid filled with value of ~1~ and then we'll multiply with the top elevation, for the grids in the constant head boundaries we'll replace their values from the function.
+
+#+BEGIN_SRC python
 initial_head = np.ones((10, 60, 40)) * 3832
 for gp, head in get_chd_stress_period():
     initial_head[gp] = head
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
+#+END_SRC
+
+#+RESULTS[98d1cc57da72869b40ec53f96a61f65facc65cc1]:
+#+begin_src text
+#+end_src
+
+Now let's define the recharge, the value obtained here is after dividing the recharge per year by 365 as our default time unit is in days.
+
+#+BEGIN_SRC python
 ic = flopy.mf6.ModflowGwfic(gwf)
 
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=0.0055)
+#+END_SRC
+
+#+RESULTS[c029608ab5f1aca1c69651974be931d890d0850d]:
+#+begin_src text
+#+end_src
+
+Now let's define a constant hydraulic conductivity of 4.0 m/day. And the chd package will use the output from the function defined previously.
+
+#+BEGIN_SRC python
 npf = flopy.mf6.ModflowGwfnpf(gwf,
                               k=4.0,
                               save_specific_discharge=True)
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
+#+END_SRC
+
+#+RESULTS[d5abf4ff40b69ceb40f3a67325b68b784aebb257]:
+#+begin_src text
+#+end_src
+
+Now let's define the files to save the results in.
+
+#+BEGIN_SRC python
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,
                             budget_filerecord=budget_file,
                             head_filerecord=head_file,
                             saverecord=[('HEAD', 'ALL'), ('BUDGET', 'ALL')])
+#+END_SRC
+
+#+RESULTS[ebe344c02f023b4702ca3f62d4476a384d468ab3]:
+#+begin_src text
+#+end_src
+
+finally writing and running the simulation.
+
+#+BEGIN_SRC python
 sim.write_simulation()
 sim.run_simulation()
+#+END_SRC
 
+#+RESULTS[d5efa5c41041b6f0c35d1df0663296722ca2915e]:
+#+begin_src text
+| True | nil |
+#+end_src
+
+Since our run was successful we can extract the values we want.
+#+BEGIN_SRC python
 head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
+#+END_SRC
 
+#+RESULTS[283d8dc09183b5bbf4b82789826de7d33ccb2887]:
+#+begin_src text
+#+end_src
 
+Post processing tool to get the specific discharges.
 
+#+BEGIN_SRC python
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+#+END_SRC
 
+#+RESULTS[7139ece9c081b80fd8fc0a4ae79b3d38f02e86a4]:
+#+begin_src text
+#+end_src
+
+Now we can plot the results here.
+
+#+BEGIN_SRC python
 pmv = flopy.plot.PlotMapView(gwf)
 pmv.plot_array(head_arr)
 pmv.plot_grid(colors='white', linewidths=0.3)
 pmv.contour_array(head_arr, linewidths=1., c_label=True, cmap='Wistia')
 # flopy.plot.styles.graph_legend()
 pmv.plot_vector(qx, qy, normalize=True, color="white")
-plt.savefig("./images/01_00_plan.png")
+plt.savefig("./images/2_plan.pdf")
 
 plt.show()
+#+END_SRC
 
+#+RESULTS[dccd84a1f34b9479ef7e41c10ce672e6b219b231]:
+#+begin_src text
+None
+#+end_src
 
+[[./images/2_plan.pdf]]
+
+The head is higher 
+#+BEGIN_SRC python
 def plot_x_section(**kwargs):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     # first subplot
@@ -101,9 +213,22 @@ def plot_x_section(**kwargs):
                               headwidth=3, headlength=4, width=2e-3,
                               pivot='mid', minshaft=2, hstep=4, scale=2,
                               color='blue')
+
     filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
-    plt.savefig(f"./images/01_01_{filename}.png")
+    plt.savefig(f"./images/2_section_{filename}.pdf")
     plt.show()
+#+END_SRC
+
+#+RESULTS[0d351fe6733948388853f92d8d1bad6a05322ed6]:
+#+begin_src text
+#+end_src
 
 
+#+BEGIN_SRC python
 plot_x_section(row=20)
+#+END_SRC
+
+#+RESULTS[ff8dab6b02c78e57814d12356627b0a4dfda3f1d]:
+#+begin_src text
+None
+#+end_src
