@@ -121,7 +121,6 @@ def get_riv_stress_period():
             # cellid, stage, cond, rbot, aux, boundname
             yield ((lay, grid_pt[1], grid_pt[2]),
                    thk, river_conductance, bottom)
-
     layers_tuple = list(get_layers(top=stream_top, bottom=stream_bottom))
     for grid_pt in get_grid_points(stream):
         for lay, thk, bottom in layers_tuple:
@@ -159,9 +158,11 @@ for i, _ in sp:
     ipoints[i] = -1
 x = [l[0][2] for l in sp]
 y = [l[0][1] for l in sp]
+c = [l[1] for l in sp]
 
 
-plt.scatter(x, y)
+plt.scatter(x, y, c=c)
+plt.colorbar()
 plt.show()
 
 
@@ -239,9 +240,14 @@ if not result:
 head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
 
+chd_bud = bud.get_data(text='CHD')
+
 
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
+plt.imshow(watertable)
+plt.show()
 
 
 def plot_plan(layer=0):
@@ -305,3 +311,4 @@ plot_plan(layer=geolyr_subdivisions[1]-1)
 lyr_index = sum(map(lambda b: b > well_bottom, bot))
 plot_plan(layer=lyr_index)
 plot_x_section(row=20)
+plot_x_section(column=60)

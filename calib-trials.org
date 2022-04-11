@@ -9,5 +9,39 @@ River conductance having absolutely zero effect.
 
 After correcting the model we got:
 
-      Kh  RivKh  Rech       RMSE       NSE
-354  3.0    0.1  17.0  30.717581 -0.578123
+     |   Kh | RivKh |  Rech | RMSE |   NSE |
+     | 4.48 |  0.01 | 18.00 | 9.99 | 0.833 |
+
+The head at the well location is: -1.6578531592527426
+
+After second well was turned on: -2.3696001049170703
+
+#+begin_src R :exports both
+df <- read.csv("./data/4_calibration_wells_model.csv")
+list(mean(df$err),
+sd(df$err))
+#+end_src
+
+#+RESULTS[43b7004e4c89087b7833f3e1f174f4b5b4cbf427]:
+#+begin_src text
+| -0.236992458308641 | 1.48750364995077 |
+#+end_src
+
+#+begin_src R :exports both
+df <- read.csv("./calib-trials-3.csv")
+df[df$NSE > .8,]
+#+end_src
+
+	|   Kh | RivKh |  Rech |  RMSE |   NSE |
+	|------+-------+-------+-------+-------|
+	| 3.96 |  0.01 | 16.00 | 10.14 | 0.828 |
+	| 3.96 |  0.01 | 16.67 | 10.92 | 0.801 |
+	| 4.13 |  0.01 | 16.00 | 10.42 | 0.818 |
+	| 4.13 |  0.01 | 16.67 | 10.10 | 0.830 |
+	| 4.13 |  0.01 | 17.33 | 10.82 | 0.804 |
+	| 4.31 |  0.01 | 16.67 | 10.31 | 0.822 |
+	| 4.31 |  0.01 | 17.33 | 10.03 | 0.832 |
+	| 4.31 |  0.01 | 18.00 | 10.74 | 0.807 |
+	| 4.48 |  0.01 | 17.33 | 10.25 | 0.824 |
+	| 4.48 |  0.01 | 18.00 |  9.99 | 0.833 |
+	| 4.65 |  0.01 | 18.00 | 10.16 | 0.827 |

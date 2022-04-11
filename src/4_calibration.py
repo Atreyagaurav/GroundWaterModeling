@@ -66,12 +66,15 @@ river_width = 1
 riverbed_thickness = 1
 
 well1 = geometry.Point((2373.8920225624497, 1438.255033557047))
-# 2373.8920225624497,1438.255033557047
-# 1871.071716357776,1030.7494407158838
-
 well1_top = 0
 well1_bottom = Bottom
 well1_rate = -200 * 5.451  # GPM → m³/day
+
+well2 = geometry.Point((1871.071716357776, 1030.7494407158838))
+well2_top = 0
+well2_bottom = Bottom
+well2_rate = -250 * 5.451  # GPM → m³/day
+
 
 # CALIBRATION PARAMETERS
 Kh = 4.48
@@ -192,25 +195,32 @@ def get_chd_stress_period():
 def get_well_stress_period():
     # temp fix
     well1_layers = [l[0] for l in get_layers(well1_top, well1_bottom)]
-    well_pts = get_grid_points(well1, xy_grid_points=xy_grid_points,
+    well1_pts = get_grid_points(well1, xy_grid_points=xy_grid_points,
                                layers=well1_layers)
-    rate = well1_rate/len(well1_layers)
-    return {0: [(wpt, rate) for wpt, _, _ in well_pts]}
+    rate1 = well1_rate/len(well1_layers)
+    spd = [(wpt, rate1) for wpt, _, _ in well1_pts]
+    if SECOND_WELL_ON:
+        well2_layers = [l[0] for l in get_layers(well2_top, well2_bottom)]
+        well2_pts = get_grid_points(well2, xy_grid_points=xy_grid_points,
+                                   layers=well2_layers)
+        rate2 = well2_rate/len(well2_layers)
+        spd += [(wpt, rate2) for wpt, _, _ in well2_pts]
+    return {0: spd}
 
 
 
 #  TO plot the heads
-# sp = list(get_chd_stress_period())
+sp = list(get_chd_stress_period())
 
-# x = [l[0][2] for l in sp]+[0]
-# y = [l[0][1] for l in sp]+[0]
-# c = [l[1] for l in sp] + [None]
+x = [l[0][2] for l in sp]+[0]
+y = [l[0][1] for l in sp]+[0]
+c = [l[1] for l in sp] + [None]
 
-# plt.scatter(x, y, c=c)
-# plt.xlim(left=0, right=NC)
-# plt.ylim(bottom=0, top=NR)
-# plt.colorbar()
-# plt.show()
+plt.scatter(x, y, c=c)
+plt.xlim(left=0, right=NC)
+plt.ylim(bottom=NR, top=0)
+plt.colorbar()
+plt.show()
 
 
 # MODELING STARTS FROM HERE:
@@ -294,23 +304,21 @@ if not result:
 head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
 
+watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
+
+
 
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
 
-model_heads = map(lambda x: head_arr[x], calib_wells_grid_pts)
+model_heads = map(lambda x: watertable[(x[1], x[2])], calib_wells_grid_pts)
 
-# loop to make sure head is read from the cell within watertable
-i = 1
-while any(map(lambda x: x<0, model_heads)):
-    model_heads = list(map(lambda x: head_arr[(i, x[1], x[2])], calib_wells_grid_pts))
-    i = i+1
 
 calib_wells.loc[:, 'model_h'] = pd.Series(model_heads)
 calib_wells.loc[:, 'err'] = calib_wells.model_h - calib_wells.h
 calib_wells.loc[:, 'sq_err'] = calib_wells.err * calib_wells.err
-calib_wells.loc[:, 'pt_size'] = calib_wells.err.map(lambda x: x)
+calib_wells.loc[:, 'pt_size'] = calib_wells.err.map(lambda x: abs(x))
 calib_wells.loc[:, 'pt_color'] = calib_wells.err.map(lambda x: 'red' if x>0 else 'blue')
 
 rmse = math.sqrt(calib_wells.sq_err.sum())
@@ -325,26 +333,21 @@ fig = plt.figure(constrained_layout=True)
 ax1 = fig.add_subplot(gs[0, :4])
 
 
-layer = 20
-ax1.set_title(f'Layer-{layer}')
+ax1.set_title('Water Table')
 pmv = flopy.plot.PlotMapView(gwf, ax=ax1)
-pmv.plot_array(head_arr[layer])
+pmv.plot_array(watertable)
 pmv.plot_grid(colors='white', linewidths=0.3)
 # pmv.plot_bc('CHD')
-contours = pmv.contour_array(head_arr[layer],
+contours = pmv.contour_array(watertable,
                              levels=np.arange(0, 100, 1),
                              linewidths=1.,
                              colors='black')
 ax1.clabel(contours, fmt="%.0f")
-pmv.contour_array(head_arr[layer],
+pmv.contour_array(watertable,
                   levels=np.arange(0, 100, .2),
                   linewidths=.4,
                   colors='black')
-# flopy.plot.styles.graph_legend()
-pmv.plot_vector(qx[layer, :, :], qy[layer, :, :],
-                headwidth=3, headlength=4, width=1.4e-3, scale=20,
-                normalize=False, istep=10, jstep=10, color="white")
-shps= pmv.plot_shapefile('./data/4_river',
+shps = pmv.plot_shapefile('./data/4_river',
                          edgecolor='red',
                          linewidth=2)
 
@@ -357,4 +360,5 @@ ax2 = fig.add_subplot(gs[0, 4])
 ax2.scatter(calib_wells.h, calib_wells.model_h, c=calib_wells.pt_color)
 max_h = max(calib_wells.h.max(), calib_wells.model_h.max())
 plt.plot([0, max_h], [0, max_h])
+fig.tight_layout()
 plt.show()
