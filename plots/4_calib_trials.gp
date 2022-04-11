@@ -1,6 +1,6 @@
 set datafile separator ","
 
-calibdata="./data/calib-trials-3.csv"
+calibdata="./data/4_calib-trials-3.csv"
 
 set yrange [0:100]
 set multiplot layout 2,2
