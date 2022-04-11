@@ -9,6 +9,7 @@ set style data parallelaxes
 
 myColor(a,r,g,b) = (a<<24) + (r<<16) + (g<<8) + b
 
+# list of (percentile R G B)
 set palette defined \
     (0 0 0 1, 0.1 0 0 1,\
     0.15 0 1 0, 0.25 1 1 0,\
