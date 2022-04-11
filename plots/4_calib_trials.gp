@@ -1,6 +1,6 @@
 set datafile separator ","
 
-calibdata="./calib-trials-3.csv"
+calibdata="./data/calib-trials-3.csv"
 
 set yrange [0:100]
 set multiplot layout 2,2
@@ -20,5 +20,3 @@ set ylabel "NSE"
 plot 1 with filledcurves y=0 fs transparent solid 0.4 fc "green",\
      .8 with lines ls 7 lc "blue",\
      calibdata using 0:5 with points ls 7 ps .4
-
-
