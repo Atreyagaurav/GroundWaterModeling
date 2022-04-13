@@ -121,11 +121,15 @@ def get_riv_stress_period():
             # cellid, stage, cond, rbot, aux, boundname
             yield ((lay, grid_pt[1], grid_pt[2]),
                    thk, river_conductance, bottom)
+
+
+def get_riv_stress_period2():
     layers_tuple = list(get_layers(top=stream_top, bottom=stream_bottom))
     for grid_pt in get_grid_points(stream):
         for lay, thk, bottom in layers_tuple:
             yield ((lay, grid_pt[1], grid_pt[2]),
-                   thk, stream_conductance, bottom)
+                   # thk, stream_conductance, bottom)
+                   bottom, stream_conductance)
 
 
 def get_chd_stress_period():
@@ -195,9 +199,15 @@ initial_head = np.ones((NLay, NR, NC)) * Top
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=1/365)
+
 rivers = flopy.mf6.ModflowGwfriv(
     gwf,
     stress_period_data=list(get_riv_stress_period()))
+
+rivers2 = flopy.mf6.ModflowGwfdrn(
+    gwf,
+    stress_period_data=list(get_riv_stress_period2()))
+
 npf = flopy.mf6.ModflowGwfnpf(gwf,
                               # icelltype=[1, 0, 0, 0],
                               icelltype=1,
@@ -242,12 +252,29 @@ bud = gwf.output.budget()
 
 chd_bud = bud.get_data(text='CHD')
 
-
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
 plt.imshow(watertable)
 plt.show()
+
+
+zones = np.ones((NLay, NR, NC), dtype=int)
+for p in get_grid_points(stream, layers=[0, 1]):
+    zones[p] = 2
+
+
+bm = gwf.output.zonebudget(zones)
+
+bm.change_model_name(name)
+bm.change_model_ws(ws)
+
+# There is a bug so have to edit the output zbnam file to add grb file manually, so only run exisiting model files, don't write it.
+
+# bm.write_input()
+bm.run_model(exe_name='modflow-zbud6')
+
+print(bm.get_budget())
 
 
 def plot_plan(layer=0):

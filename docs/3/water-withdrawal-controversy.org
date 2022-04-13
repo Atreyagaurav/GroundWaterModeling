@@ -1,5 +1,5 @@
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 import flopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,8 +7,9 @@ import numpy as np
 from shapely import geometry
 #+END_SRC
 
+
 Simulation parameters
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 X0 = 0
 XN = 7800
 NC = 78
@@ -25,24 +26,27 @@ Height = 220
 Bottom = Top-Height
 #+END_SRC
 
+
 geo layers
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 geolyr_thickness = [50, 20, 150]
 geolyr_subdivisions = [10, 4, 30]
 #+END_SRC
 
-#+BEGIN_SRC python
+
+#+BEGIN_SRC python :results none
 WELL_ON = True
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 xy_grid_points = np.mgrid[X0:XN:ΔX, Y0:YN:ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN, NC)
 #+END_SRC
 
 
-#+BEGIN_SRC python
+
+#+BEGIN_SRC python :results none
 domain = geometry.box(X0, Y0, XN, YN)
 river = geometry.box(300, 0, 300+850, YN)
 river_top = 10
@@ -61,7 +65,7 @@ well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def get_layers(top=Top, bottom=Bottom):
     all_layers = [(i, b) for i, b in enumerate(bot) if b < top]
     for i, b in all_layers:
@@ -75,7 +79,7 @@ def get_layers(top=Top, bottom=Bottom):
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def get_grid_points(shape, layers=None):
     if not layers:
         layers = [0]
@@ -92,7 +96,7 @@ def get_grid_points(shape, layers=None):
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 # computational layers
 NLay = sum(geolyr_subdivisions)
 lookup_table = np.concatenate(
@@ -100,7 +104,7 @@ lookup_table = np.concatenate(
          enumerate(geolyr_subdivisions)))
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 # hetereogeiniety in 2nd geolayer
 layers_2nd = [i for i, v in enumerate(lookup_table) if v == 1]
 k_2nd_layer = np.ones(shape=(NR, NC))*3.0
@@ -111,7 +115,7 @@ for cell in get_grid_points(river):
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 lyr_k_hz = [30.0,
             k_2nd_layer,
             150.0]
@@ -120,7 +124,7 @@ lyr_k_vt = [3.0,
             15.0]
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 thickness = np.zeros(NLay)
 k_hz = [0 for i in range(NLay)]
 k_vt = [0 for i in range(NLay)]
@@ -128,7 +132,7 @@ bot = np.ones(NLay)
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 for lay in range(NLay):
     geo_lay = lookup_table[lay]
     thickness[lay] = geolyr_thickness[geo_lay]/geolyr_subdivisions[geo_lay]
@@ -138,7 +142,7 @@ for lay in range(NLay):
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def get_riv_stress_period():
     "gives the stress_period_data on the grid_points for river grids."
 
@@ -156,7 +160,7 @@ def get_riv_stress_period():
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def get_chd_stress_period():
     "gives the stress_period_data on the grid_points for constant head points."
     # river grid points
@@ -174,7 +178,7 @@ def get_chd_stress_period():
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def get_well_stress_period():
     # temp fix
     well_layers = list(get_layers(well_top, well_bottom))
@@ -183,7 +187,7 @@ def get_well_stress_period():
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 sp = list(get_chd_stress_period())
 
 ipoints = np.ones((NLay, NR, NC))
@@ -195,7 +199,7 @@ c = [l[1] for l in sp]
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 plt.scatter(x, y, c=c)
 plt.colorbar()
 plt.show()
@@ -203,7 +207,7 @@ plt.show()
 
 
 MODELING STARTS FROM HERE:
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 ws = './models/3_water_withdrawal_controversy'
 name = '3_water_wd'
 
@@ -212,14 +216,14 @@ sim = flopy.mf6.MFSimulation(sim_name=name,
                              exe_name='modflow-mf6')
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 tdis = flopy.mf6.ModflowTdis(sim,
                              time_units='days')
 ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 dis = flopy.mf6.ModflowGwfdis(gwf,
                               length_units='FEET',
                               nlay=NLay,
@@ -231,12 +235,12 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               botm=bot)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 initial_head = np.ones((NLay, NR, NC)) * Top
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=1/365)
 rivers = flopy.mf6.ModflowGwfriv(
     gwf,
@@ -248,7 +252,7 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
                               save_specific_discharge=True)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 # EXample to modify the k values after it is defined.
 # k_values = npf.k.get_data()
 # kv_values = npf.k33.get_data()
@@ -259,20 +263,20 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
 # npf.k33.set_data(kv_values)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 if WELL_ON:
     wells = flopy.mf6.ModflowGwfwel(
         gwf,
         stress_period_data=get_well_stress_period())
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -283,7 +287,7 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 sim.write_simulation()
 result, _ = sim.run_simulation()
 
@@ -292,7 +296,7 @@ if not result:
     exit(1)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
 
@@ -304,14 +308,13 @@ qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
 #+END_SRC
 
-
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 plt.imshow(watertable)
 plt.show()
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def plot_plan(layer=0):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     ax.set_title(f'Layer-{layer}')
@@ -329,7 +332,7 @@ def plot_plan(layer=0):
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 def plot_x_section(**kwargs):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     # first subplot
@@ -370,23 +373,81 @@ def plot_x_section(**kwargs):
 #+END_SRC
 
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 plot_plan(layer=geolyr_subdivisions[0]-1)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 plot_plan(layer=geolyr_subdivisions[1]-1)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 lyr_index = sum(map(lambda b: b > well_bottom, bot))
 plot_plan(layer=lyr_index)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 plot_x_section(row=20)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results none
 plot_x_section(column=60)
 #+END_SRC
+
+** Zone Budge and effect of Well
+
+Now let's define zone for trout stream, will use top 2 layers.
+
+Here ZONE_2 will be the trout stream and everything else will be ZONE_1.
+#+begin_src python
+zones = np.ones((NLay, NR, NC), dtype=int)
+for p in get_grid_points(stream, layers=[0, 1]):
+    zones[p] = 2
+#+end_src
+
+we can make a zonebudget model from the previous modflow model.
+#+begin_src python
+bm = gwf.output.zonebudget(zones)
+
+bm.change_model_name(name)
+bm.change_model_ws(ws)
+#+end_src
+
+There seems to be a bug in write input method for budget model as I had to edit the output zbnam file to add grb file manually. So only run exisiting model files, don't write it unless you change the zone arr, in that case write it and manually add grb file again.
+
+#+begin_src python
+# bm.write_input()
+bm.run_model(exe_name='modflow-zbud6')
+#+end_src
+
+The .zbnam file must have following contents:
+#+begin_src text
+BEGIN ZONEBUDGET
+  ZON   3_water_wd.zon
+  BUD   3_water_wd.bud
+  GRB   3_water_wd.dis.grb
+END ZONEBUDGET
+#+end_src
+
+
+With that we can get the water budget.
+#+begin_src python
+bm.get_budget()
+#+end_src
+
+Without well:
+29121.5759986 ft³/day = 0.33705527776157407 cfs
+
+With well:
+ 20695.35801522 ft³/day = 0.2395296066576389 cfs
+
+Difference 0.337 - 0.240 = 0.0975  ft³/sec
+
+Hence the overall reduction is less than the 5% of the index flow.
+
+Also if we also look at the reduction in the recharge to the river, we can sum both of them we get:
+\(5.329 \times 10^{4} - 2.459 \times 10^{4} + 2.912 \times 10^{4} - 2.070 \times 10^{4} = 37124.77086423 ft³/day\)
+
+OR 192.86 GPM
+
+Which is close to our well_rate = -38499.8688 ft³/day (-200 GPM).
