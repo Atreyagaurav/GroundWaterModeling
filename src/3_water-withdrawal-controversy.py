@@ -1,11 +1,9 @@
-#!/usr/bin/env python
 import flopy
 import matplotlib.pyplot as plt
 import numpy as np
 
 from shapely import geometry
 
-# Simulation parameters
 X0 = 0
 XN = 7800
 NC = 78
@@ -21,16 +19,13 @@ Top = 15
 Height = 220
 Bottom = Top-Height
 
-# geo layers
 geolyr_thickness = [50, 20, 150]
 geolyr_subdivisions = [10, 4, 30]
-
 
 WELL_ON = True
 
 xy_grid_points = np.mgrid[X0:XN:ΔX, Y0:YN:ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN, NC)
-
 
 domain = geometry.box(X0, Y0, XN, YN)
 river = geometry.box(300, 0, 300+850, YN)
@@ -48,7 +43,6 @@ well_top = -150
 well_bottom = -160
 well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
 
-
 def get_layers(top=Top, bottom=Bottom):
     all_layers = [(i, b) for i, b in enumerate(bot) if b < top]
     for i, b in all_layers:
@@ -59,7 +53,6 @@ def get_layers(top=Top, bottom=Bottom):
         top = b
     if b <= bottom:
         yield i, top, bottom
-
 
 def get_grid_points(shape, layers=None):
     if not layers:
@@ -75,7 +68,6 @@ def get_grid_points(shape, layers=None):
             for j in layers:
                 yield (j, row, col)
 
-
 # computational layers
 NLay = sum(geolyr_subdivisions)
 lookup_table = np.concatenate(
@@ -83,13 +75,11 @@ lookup_table = np.concatenate(
          enumerate(geolyr_subdivisions)))
 
 # hetereogeiniety in 2nd geolayer
-layers_2nd = [i for i, v in enumerate(lookup_table) if v == 1]
 k_2nd_layer = np.ones(shape=(NR, NC))*3.0
 kv_2nd_layer = np.ones(shape=(NR, NC))*.01
 for cell in get_grid_points(river):
     k_2nd_layer[cell[1], cell[2]] = 30.0
     kv_2nd_layer[cell[1], cell[2]] = 3.0
-
 
 lyr_k_hz = [30.0,
             k_2nd_layer,
@@ -97,7 +87,6 @@ lyr_k_hz = [30.0,
 lyr_k_vt = [3.0,
             kv_2nd_layer,
             15.0]
-
 
 thickness = np.zeros(NLay)
 k_hz = [0 for i in range(NLay)]
@@ -111,7 +100,6 @@ for lay in range(NLay):
     k_vt[lay] = lyr_k_vt[geo_lay]
     bot[lay] = Top-sum(thickness)
 
-
 def get_riv_stress_period():
     "gives the stress_period_data on the grid_points for river grids."
 
@@ -121,16 +109,11 @@ def get_riv_stress_period():
             # cellid, stage, cond, rbot, aux, boundname
             yield ((lay, grid_pt[1], grid_pt[2]),
                    thk, river_conductance, bottom)
-
-
-def get_riv_stress_period2():
     layers_tuple = list(get_layers(top=stream_top, bottom=stream_bottom))
     for grid_pt in get_grid_points(stream):
         for lay, thk, bottom in layers_tuple:
             yield ((lay, grid_pt[1], grid_pt[2]),
-                   # thk, stream_conductance, bottom)
-                   bottom, stream_conductance)
-
+                   thk, stream_conductance, bottom)
 
 def get_chd_stress_period():
     "gives the stress_period_data on the grid_points for constant head points."
@@ -147,13 +130,16 @@ def get_chd_stress_period():
         for lay, thk, bottom in layers_tuple:
             yield ((lay, grid_pt[1], grid_pt[2]), 10.5)
 
+_gps = map(geometry.Point, xy_grid_points)
+_well_gp = min(enumerate(_gps), key=lambda x: well.distance(x[1]))
+well_row = _well_gp[0] % (NR)
+well_col = _well_gp[0] // (NR)
 
 def get_well_stress_period():
-    # temp fix
     well_layers = list(get_layers(well_top, well_bottom))
-    return {0: [((i, 20, 56), well_rate/len(well_layers)) for i, _, _ in
+    return {0: [((i, well_row, well_col),
+                 well_rate/len(well_layers)) for i, _, _ in
                 well_layers]}
-
 
 sp = list(get_chd_stress_period())
 
@@ -164,13 +150,10 @@ x = [l[0][2] for l in sp]
 y = [l[0][1] for l in sp]
 c = [l[1] for l in sp]
 
-
 plt.scatter(x, y, c=c)
 plt.colorbar()
 plt.show()
 
-
-# MODELING STARTS FROM HERE:
 ws = './models/3_water_withdrawal_controversy'
 name = '3_water_wd'
 
@@ -184,8 +167,6 @@ ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 
 dis = flopy.mf6.ModflowGwfdis(gwf,
-                              # nogrb=True,
-                              # idomain=ipoints,
                               length_units='FEET',
                               nlay=NLay,
                               nrow=NR,
@@ -199,17 +180,10 @@ initial_head = np.ones((NLay, NR, NC)) * Top
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=1/365)
-
 rivers = flopy.mf6.ModflowGwfriv(
     gwf,
     stress_period_data=list(get_riv_stress_period()))
-
-rivers2 = flopy.mf6.ModflowGwfdrn(
-    gwf,
-    stress_period_data=list(get_riv_stress_period2()))
-
 npf = flopy.mf6.ModflowGwfnpf(gwf,
-                              # icelltype=[1, 0, 0, 0],
                               icelltype=1,
                               k=k_hz,
                               k33=k_vt,
@@ -218,6 +192,7 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
 # EXample to modify the k values after it is defined.
 # k_values = npf.k.get_data()
 # kv_values = npf.k33.get_data()
+# layers_2nd = [i for i, v in enumerate(lookup_table) if v == 1]
 # for lay in layers_2nd:
 #     k_values[lay] = k_2nd_layer
 #     kv_values[lay] = kv_2nd_layer
@@ -240,6 +215,7 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
                             head_filerecord=head_file,
                             saverecord=[('HEAD', 'ALL'),
                                         ('BUDGET', 'ALL')])
+
 sim.write_simulation()
 result, _ = sim.run_simulation()
 
@@ -252,32 +228,16 @@ bud = gwf.output.budget()
 
 chd_bud = bud.get_data(text='CHD')
 
+
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
+
 plt.imshow(watertable)
+plt.colorbar()
 plt.show()
 
-
-zones = np.ones((NLay, NR, NC), dtype=int)
-for p in get_grid_points(stream, layers=[0, 1]):
-    zones[p] = 2
-
-
-bm = gwf.output.zonebudget(zones)
-
-bm.change_model_name(name)
-bm.change_model_ws(ws)
-
-# There is a bug so have to edit the output zbnam file to add grb file manually, so only run exisiting model files, don't write it.
-
-# bm.write_input()
-bm.run_model(exe_name='modflow-zbud6')
-
-print(bm.get_budget())
-
-
-def plot_plan(layer=0):
+def plot_plan(ext='pdf', layer=0):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     ax.set_title(f'Layer-{layer}')
     pmv = flopy.plot.PlotMapView(gwf, ax=ax)
@@ -289,11 +249,12 @@ def plot_plan(layer=0):
     # flopy.plot.styles.graph_legend()
     pmv.plot_vector(qx[layer, :, :], qy[layer, :, :],
                     normalize=False, istep=2, jstep=2, color="white")
-    plt.savefig(f"./images/03_00_plan_layer-{layer}.png")
+    filename = f"./images/3_plan_layer-{layer}.{ext}"
+    plt.savefig(filename)
     plt.show()
+    return filename
 
-
-def plot_x_section(**kwargs):
+def plot_x_section(ext='pdf', **kwargs):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     # first subplot
     title_text = "; ".join((f'{k}={v}' for k, v in kwargs.items()))
@@ -328,14 +289,32 @@ def plot_x_section(**kwargs):
                               color='blue')
     # plt.colorbar(pa, shrink=0.5, ax=ax)
     filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
-    plt.savefig(f"./images/03_01_{filename}.png")
+    saveas = f"./images/3_section_{filename}.{ext}"
+    plt.savefig(saveas)
     plt.show()
+    return saveas
 
+plot_plan(ext='png', layer=geolyr_subdivisions[0]-1)
 
-plot_plan(layer=geolyr_subdivisions[0]-1)
-plot_plan(layer=geolyr_subdivisions[1]-1)
+plot_plan(ext='png', layer=sum(geolyr_subdivisions[:2])-1)
 
 lyr_index = sum(map(lambda b: b > well_bottom, bot))
-plot_plan(layer=lyr_index)
-plot_x_section(row=20)
-plot_x_section(column=60)
+plot_plan(ext='png', layer=lyr_index)
+
+plot_x_section(ext='png', row=20)
+
+plot_x_section(ext='png', column=60)
+
+zones = np.ones((NLay, NR, NC), dtype=int)
+for p in get_grid_points(stream, layers=[0, 1]):
+    zones[p] = 2
+
+bm = gwf.output.zonebudget(zones)
+
+bm.change_model_name(name)
+bm.change_model_ws(ws)
+
+# bm.write_input()
+bm.run_model(exe_name='modflow-zbud6')
+
+bm.get_budget()

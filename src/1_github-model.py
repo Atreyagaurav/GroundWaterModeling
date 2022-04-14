@@ -1,9 +1,8 @@
-#!/usr/bin/env python
 import flopy
 import matplotlib.pyplot as plt
 
 ws = './models/01_github_example/'
-name = '01_github_example'
+name = '01_git_ex'
 sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name='modflow-mf6')
 
 tdis = flopy.mf6.ModflowTdis(sim)
@@ -13,6 +12,7 @@ gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 dis = flopy.mf6.ModflowGwfdis(gwf, nrow=10, ncol=10)
 ic = flopy.mf6.ModflowGwfic(gwf)
 npf = flopy.mf6.ModflowGwfnpf(gwf, save_specific_discharge=True)
+
 chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=[[(0, 0, 0), 1.],
                                                        [(0, 9, 9), 0.]])
 
@@ -26,7 +26,6 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
 sim.write_simulation()
 sim.run_simulation()
 
-
 head = gwf.output.head().get_data()
 bud = gwf.output.budget()
 
@@ -39,5 +38,5 @@ pmv.plot_grid(colors='white')
 pmv.contour_array(head, levels=[.2, .4, .6, .8], linewidths=3.)
 pmv.plot_vector(qx, qy, normalize=True, color="white")
 
-
-plt.savefig("./images/01_00_plan.png")
+plt.savefig("./images/1_results_plan.pdf")
+plt.show()
