@@ -1,5 +1,4 @@
 *.png
-models
 *.zip
 temp*
 venv
