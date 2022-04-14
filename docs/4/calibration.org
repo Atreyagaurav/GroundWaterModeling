@@ -1,3 +1,38 @@
+#+TITLE: Calibrating Model using Flopy
+#+AUTHOR: Gaurav Atreya
+#+LATEX_CLASS: unisubmission
+#+LATEX_CLASS_OPTIONS: [titlepage,12pt]
+
+#+OPTIONS: num:nil
+#+OPTIONS: toc:nil
+
+#+LATEX_HEADER: \ClassCode{GEOL 6024}
+#+LATEX_HEADER: \ClassName{GroundWater Modeling}
+#+LATEX_HEADER: \ActivityType{Project}
+#+LATEX_HEADER: \SubmissionType{Report}
+#+LATEX_HEADER: \SubmissionNumber{4}
+#+LATEX_HEADER: \SubmissionName{Calibrating Model using Flopy}
+#+LATEX_HEADER: \Author{Gaurav Atreya}
+#+LATEX_HEADER: \Mnumber{M14001485}
+#+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
+
+# #+TOC: headlines 2
+
+* Calibration
+** Introduction
+
+Planning to install a new 250 GPM well at their main facility, a small manufacturer hires you to determine whether their proposed well (see above) will cause any problems with the stream and an existing well and whether the new well or the existing well would likely become contaminated by a nearby TCE plume as a result of the operation of the new well. The new well will be operated continuously.
+
+Geologic data indicate a water table aquifer with bottom elevation of –100ft in this area. The aquifer abruptly pinches out at west and southern boundaries. Ground surface elevation in the area is approximately 3m. A 1st-order stream (average depth=1m) flowing through the area empties into the deep lake (water surface elevation 0.00m) in the NE corner of the map. The stream is predominantly fed by groundwater, meaning the streamflow is essentially baseflow.
+
+Although there has been no study of actual recharge rates to this aquifer, long term average recharge from precipitation in this part of the state varies between 10 and 18 inches/yr depending on the location of the aquifer.
+
+Only one well in the vicinity currently pumps (200 GPM) from this aquifer. This well has been operating continuously for the past 15 years.
+
+This past August, in anticipation of the need to understand this aquifer better, 45 piezometers were installed to determine the water table variation throughout the area. In addition, stream water levels and stream discharges were measured. Average stream discharge measured at a cross section approaching the lake was 1486.65 m³/d (272.73 GPM). The streambed leakance (hydraulic conductivity per unit thickness of the streambed) is unknown and must be calibrated. Annual average water table elevations and stream water levels are provided.
+
+** Codes
+
 
 #+BEGIN_SRC python
 import math
@@ -191,6 +226,7 @@ def get_layers(top=Top, bottom=Bottom):
 #+begin_src text
 #+end_src
 
+Similarly, a little more complex function to get the grid points. You can provide a shape and it'll give you the grid points, shape can only be ~geometry.Point~, ~geometry.Polygon~ or ~geometry.LineString~.
 
 #+BEGIN_SRC python
 def get_grid_points(shape, /, xy_grid_points, layers=None):

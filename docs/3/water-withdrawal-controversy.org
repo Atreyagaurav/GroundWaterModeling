@@ -1,5 +1,36 @@
+#+TITLE: Water Withdrawal Controversy
+#+AUTHOR: Gaurav Atreya
+#+LATEX_CLASS: unisubmission
+#+LATEX_CLASS_OPTIONS: [titlepage,12pt]
 
-#+BEGIN_SRC python :results none
+#+OPTIONS: toc:nil
+
+#+LATEX_HEADER: \ClassCode{GEOL 6024}
+#+LATEX_HEADER: \ClassName{GroundWater Modeling}
+#+LATEX_HEADER: \ActivityType{Project}
+#+LATEX_HEADER: \SubmissionType{Report}
+#+LATEX_HEADER: \SubmissionNumber{3}
+#+LATEX_HEADER: \SubmissionName{Water Withdrawal Controversy}
+#+LATEX_HEADER: \Author{Gaurav Atreya}
+#+LATEX_HEADER: \Mnumber{M14001485}
+#+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
+
+#+TOC: headlines 2
+
+* Introduction
+
+Prairie Valley Water is installing a high-capacity well to support the expanded bottled water operations. But the company's permit is denied by the state because the state’s water withdrawal assessment tool predicted that their proposed well could adversely impact the nearby trout stream. The company argues that their well will pump deep groundwater which will have no impact on what happens at the surface. 
+
+Here, we're going to make a groundwater model based on the given situation. Since we can't know for sure how much water will flow in the river and the stream as they have upstream contributions, we'll look at the rainwater contributions to the stream from the given area, and compare how much rainwater recharge to the stream when there is well compared to when there was no well.
+
+And if the recharge to the stream is less than 5\% of the index flow, we can say that the overall discharge on the stream will also decrease by the same amount.
+
+* Code
+
+** Importing libraries
+Importing the libraries. Here ~geometry~ package from ~shapely~ library is being used for the defining the geometries of rivers as polygons so we can easily get the grid points that are inside it.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 import flopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,9 +38,9 @@ import numpy as np
 from shapely import geometry
 #+END_SRC
 
-
-Simulation parameters
-#+BEGIN_SRC python :results none
+** Simulation Parameters
+Parameters for the grids.
+#+BEGIN_SRC python :results none :exports code :tangle yes
 X0 = 0
 XN = 7800
 NC = 78
@@ -27,26 +58,31 @@ Bottom = Top-Height
 #+END_SRC
 
 
-geo layers
-#+BEGIN_SRC python :results none
+Geo Layers, these are geologically different layers, the subdivisions contains the number of divisions each of these layers will contain, and the total of that will be the actual layers used by flopy.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 geolyr_thickness = [50, 20, 150]
 geolyr_subdivisions = [10, 4, 30]
 #+END_SRC
 
+This variable will be used and if it's true only then the well will be added to the model.
 
-#+BEGIN_SRC python :results none
+#+BEGIN_SRC python :results none :exports code :tangle yes
 WELL_ON = True
 #+END_SRC
 
 
-#+BEGIN_SRC python :results none
+Here, 2D grid is defined using numpy, we can use this for each layer and to have other informations like distances.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 xy_grid_points = np.mgrid[X0:XN:ΔX, Y0:YN:ΔY].reshape(2, -1).T
 x_grids = np.linspace(X0, XN, NC)
 #+END_SRC
 
 
+Here we use the geometry package to define the geometries of different zones, and well as well have any other relevant parameters that'll be used by the model later.
 
-#+BEGIN_SRC python :results none
+#+BEGIN_SRC python :results none :exports code :tangle yes
 domain = geometry.box(X0, Y0, XN, YN)
 river = geometry.box(300, 0, 300+850, YN)
 river_top = 10
@@ -64,8 +100,14 @@ well_bottom = -160
 well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
 #+END_SRC
 
+** Utility Functions and Pre-processing
+Let's define a function that gives you the layers it includes if you give it the top and bottom elevation of something.
 
-#+BEGIN_SRC python :results none
+For example, if you need the layers for well, you can call this function with well screening top and bottom elevation.
+
+This will return a generator for tuples containing the layer index, top elevation and bottom elevation. The elevations are important in case of partial covering of the layer.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 def get_layers(top=Top, bottom=Bottom):
     all_layers = [(i, b) for i, b in enumerate(bot) if b < top]
     for i, b in all_layers:
@@ -79,7 +121,11 @@ def get_layers(top=Top, bottom=Bottom):
 #+END_SRC
 
 
-#+BEGIN_SRC python :results none
+Similarly, a little more complex function to get the grid points. You can provide a shape and it'll give you the grid points, to be safe use ~geometry.Polygon~ shape. But you can use any shape if it has ~.contains()~ method.
+
+It'll return a generator for tuples containing (lay, row, col). if layers is not given it'll return points on top most layer (index=0).
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 def get_grid_points(shape, layers=None):
     if not layers:
         layers = [0]
@@ -96,7 +142,11 @@ def get_grid_points(shape, layers=None):
 #+END_SRC
 
 
-#+BEGIN_SRC python :results none
+Now we make the actual computational layers, also define a lookup array that relates computational layers to the geolayers they are part of.
+
+~lookup_table[i]~ should give ~j~, where ~i~ is the index of computational layer and ~j~ is the index of geo layer.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 # computational layers
 NLay = sum(geolyr_subdivisions)
 lookup_table = np.concatenate(
@@ -104,9 +154,12 @@ lookup_table = np.concatenate(
          enumerate(geolyr_subdivisions)))
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+For *implementing hetereogeiniety* in second geolayer  (index=1), we have to have different values of K in the same layer.
+
+As we know the break in clay layer is in the same area as the river, so we'll use the grid points belonging to the river, and modify the K value of the second layer for those grid points only.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 # hetereogeiniety in 2nd geolayer
-layers_2nd = [i for i, v in enumerate(lookup_table) if v == 1]
 k_2nd_layer = np.ones(shape=(NR, NC))*3.0
 kv_2nd_layer = np.ones(shape=(NR, NC))*.01
 for cell in get_grid_points(river):
@@ -114,8 +167,8 @@ for cell in get_grid_points(river):
     kv_2nd_layer[cell[1], cell[2]] = 3.0
 #+END_SRC
 
-
-#+BEGIN_SRC python :results none
+Now the overall K values for 3 geolayers will be something like this.
+#+BEGIN_SRC python :results none :exports code :tangle yes
 lyr_k_hz = [30.0,
             k_2nd_layer,
             150.0]
@@ -124,15 +177,17 @@ lyr_k_vt = [3.0,
             15.0]
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+Now to generate the data for each computational layers.
+#+BEGIN_SRC python :results none :exports code :tangle yes
 thickness = np.zeros(NLay)
 k_hz = [0 for i in range(NLay)]
 k_vt = [0 for i in range(NLay)]
 bot = np.ones(NLay)
 #+END_SRC
 
+This will loop through the computational layers and then will use the lookup table to fill the values from geolayers.
 
-#+BEGIN_SRC python :results none
+#+BEGIN_SRC python :results none :exports code :tangle yes
 for lay in range(NLay):
     geo_lay = lookup_table[lay]
     thickness[lay] = geolyr_thickness[geo_lay]/geolyr_subdivisions[geo_lay]
@@ -141,8 +196,15 @@ for lay in range(NLay):
     bot[lay] = Top-sum(thickness)
 #+END_SRC
 
+Now for riv package we need to give stress period, so let's define a function to generate the stress period data.
 
-#+BEGIN_SRC python :results none
+From the documentation we can see we need to return a tuple with (cellid, stage, cond, rbot, aux, boundname), with last 2 being optional.
+
+We'll use the layers falling between the river_top and bottom elevation, and then use the shape to get the grid points, for a simple model we'll just use the same conductance value for each cell. We can modify that using how much of the river the cell contains but here rivers are polygons so let's ignore that for now.
+
+We'll do the same for river and the stream and return a generator with stress period data.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 def get_riv_stress_period():
     "gives the stress_period_data on the grid_points for river grids."
 
@@ -160,7 +222,9 @@ def get_riv_stress_period():
 #+END_SRC
 
 
-#+BEGIN_SRC python :results none
+Similarly, we define the stress period data for chd package, which is for constant head boundaries. We'll use the same concept as before but return a generator for a tuple containing (cellid, head) value.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 def get_chd_stress_period():
     "gives the stress_period_data on the grid_points for constant head points."
     # river grid points
@@ -177,17 +241,24 @@ def get_chd_stress_period():
             yield ((lay, grid_pt[1], grid_pt[2]), 10.5)
 #+END_SRC
 
+Similary, function for well stress period. Here we're trying to find the grid point closest to the well co-ordinates with same logic as in the ~get_grid_points~ function but for a point.
 
-#+BEGIN_SRC python :results none
+#+BEGIN_SRC python :results none :exports code :tangle yes
+_gps = map(geometry.Point, xy_grid_points)
+_well_gp = min(enumerate(_gps), key=lambda x: well.distance(x[1]))
+well_row = _well_gp[0] % (NR)
+well_col = _well_gp[0] // (NR)
+
 def get_well_stress_period():
-    # temp fix
     well_layers = list(get_layers(well_top, well_bottom))
-    return {0: [((i, 20, 56), well_rate/len(well_layers)) for i, _, _ in
+    return {0: [((i, well_row, well_col),
+                 well_rate/len(well_layers)) for i, _, _ in
                 well_layers]}
 #+END_SRC
 
+To make sure our function is working as intended, we can call it once and plot that data. Let's plot the chd stress period data with colormap of heads.
 
-#+BEGIN_SRC python :results none
+#+BEGIN_SRC python :results none :exports code :tangle yes
 sp = list(get_chd_stress_period())
 
 ipoints = np.ones((NLay, NR, NC))
@@ -198,16 +269,23 @@ y = [l[0][1] for l in sp]
 c = [l[1] for l in sp]
 #+END_SRC
 
-
-#+BEGIN_SRC python :results none
+After we have the data, we can plot it.
+#+BEGIN_SRC python :results none :exports code :tangle yes
 plt.scatter(x, y, c=c)
 plt.colorbar()
 plt.show()
 #+END_SRC
 
+[[./images/3_chd.pdf]]
 
-MODELING STARTS FROM HERE:
-#+BEGIN_SRC python :results none
+The plot shows two patches of constant head boundaries where our river and trout streams are so it looks good.
+
+
+** Flopy Model
+
+Now we're ready to build the model. First things are to define the path and model name, as well as link the modflow executable.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 ws = './models/3_water_withdrawal_controversy'
 name = '3_water_wd'
 
@@ -216,14 +294,18 @@ sim = flopy.mf6.MFSimulation(sim_name=name,
                              exe_name='modflow-mf6')
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+Here we'll define ~tdis~, ~ims~ and ~gwf~ packages.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 tdis = flopy.mf6.ModflowTdis(sim,
                              time_units='days')
 ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+Now the discretization (~dis~) package will use the grid information to generate a grid representation.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 dis = flopy.mf6.ModflowGwfdis(gwf,
                               length_units='FEET',
                               nlay=NLay,
@@ -235,12 +317,18 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               botm=bot)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+We'll use the top elevation as initial head, and pass that to ~ic~ package.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 initial_head = np.ones((NLay, NR, NC)) * Top
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+We'll use 1ft/year of recharge, and convert it to ft/day as our units for length and time are in feet and day respectively.
+
+We'll also define the rivers and the conductivity with hetereogeiniety here.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=1/365)
 rivers = flopy.mf6.ModflowGwfriv(
     gwf,
@@ -252,10 +340,16 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
                               save_specific_discharge=True)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+
+This commented out code here shows how we can modify the values of k even after we have made the model, and we can set the data of model with out modified data.
+
+We can use this for making that hetereogeiniety if we don't want to do it at the beginning.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 # EXample to modify the k values after it is defined.
 # k_values = npf.k.get_data()
 # kv_values = npf.k33.get_data()
+# layers_2nd = [i for i, v in enumerate(lookup_table) if v == 1]
 # for lay in layers_2nd:
 #     k_values[lay] = k_2nd_layer
 #     kv_values[lay] = kv_2nd_layer
@@ -263,20 +357,28 @@ npf = flopy.mf6.ModflowGwfnpf(gwf,
 # npf.k33.set_data(kv_values)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+
+Now we'll use the previously defined functions to define the ~chd~ package.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 chd = flopy.mf6.ModflowGwfchd(
     gwf,
     stress_period_data=list(get_chd_stress_period()))
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+If well is to be inserted, insert it.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 if WELL_ON:
     wells = flopy.mf6.ModflowGwfwel(
         gwf,
         stress_period_data=get_well_stress_period())
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+
+Now we'll define some files to write the output of simulation too.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 budget_file = name + '.bud'
 head_file = name + '.hds'
 oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -286,8 +388,9 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
                                         ('BUDGET', 'ALL')])
 #+END_SRC
 
+Finally, write all those details to modflow input files, and then run it.
 
-#+BEGIN_SRC python :results none
+#+BEGIN_SRC python :results none :exports code :tangle yes
 sim.write_simulation()
 result, _ = sim.run_simulation()
 
@@ -296,7 +399,9 @@ if not result:
     exit(1)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+If we encounter errors we'd have to check what we made mistakes on and repeat it. Since it's good for now, let's try to extract the outputs.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
 
@@ -308,14 +413,20 @@ qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+We used some postprocessing tools to get the outputs we wanted, let's plot it and see.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
 plt.imshow(watertable)
+plt.colorbar()
 plt.show()
 #+END_SRC
 
+[[./images/3_watertable.pdf]]
 
-#+BEGIN_SRC python :results none
-def plot_plan(layer=0):
+We can see the river heads are ok, and then the heads decrease fro the middle of the simulation towards the river streams.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
+def plot_plan(ext='pdf', layer=0):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     ax.set_title(f'Layer-{layer}')
     pmv = flopy.plot.PlotMapView(gwf, ax=ax)
@@ -327,13 +438,15 @@ def plot_plan(layer=0):
     # flopy.plot.styles.graph_legend()
     pmv.plot_vector(qx[layer, :, :], qy[layer, :, :],
                     normalize=False, istep=2, jstep=2, color="white")
-    plt.savefig(f"./images/03_00_plan_layer-{layer}.png")
+    filename = f"./images/3_plan_layer-{layer}.{ext}"
+    plt.savefig(filename)
     plt.show()
+    return filename
 #+END_SRC
 
 
-#+BEGIN_SRC python :results none
-def plot_x_section(**kwargs):
+#+BEGIN_SRC python :results none :exports code :tangle yes
+def plot_x_section(ext='pdf', **kwargs):
     fig, ax = plt.subplots(1, 1, figsize=(9, 3), constrained_layout=True)
     # first subplot
     title_text = "; ".join((f'{k}={v}' for k, v in kwargs.items()))
@@ -368,57 +481,101 @@ def plot_x_section(**kwargs):
                               color='blue')
     # plt.colorbar(pa, shrink=0.5, ax=ax)
     filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
-    plt.savefig(f"./images/03_01_{filename}.png")
+    saveas = f"./images/3_section_{filename}.{ext}"
+    plt.savefig(saveas)
     plt.show()
+    return saveas
 #+END_SRC
 
 
-#+BEGIN_SRC python :results none
-plot_plan(layer=geolyr_subdivisions[0]-1)
+#+BEGIN_SRC python :results file :wrap center :exports both :tangle yes
+plot_plan(ext='png', layer=geolyr_subdivisions[0]-1)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
-plot_plan(layer=geolyr_subdivisions[1]-1)
+#+RESULTS[a9971098d3e6db626b99f32eefd96abc377299f0]:
+#+begin_center
+[[file:./images/3_plan_layer-9.png]]
+#+end_center
+
+
+
+
+The first Geo-Layer. Seems similar to the plot we got when we ran the model  with well turned off, so we can say the effect isn't seen much on the top geolayer.
+
+#+BEGIN_SRC python :results file :wrap center :exports both :tangle yes
+plot_plan(ext='png', layer=sum(geolyr_subdivisions[:2])-1)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
+#+RESULTS[c9700a8d73a4869c1555a6c4772b934528cdec49]:
+#+begin_center
+[[file:./images/3_plan_layer-13.png]]
+#+end_center
+
+
+There seems to be some effect of well on the second geolayer.
+
+#+BEGIN_SRC python :results file :wrap center :exports both :tangle yes
 lyr_index = sum(map(lambda b: b > well_bottom, bot))
-plot_plan(layer=lyr_index)
+plot_plan(ext='png', layer=lyr_index)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
-plot_x_section(row=20)
+#+RESULTS[9f626e4f4afcea0b80d87e23ee68fa14f789af15]:
+#+begin_center
+[[file:./images/3_plan_layer-34.png]]
+#+end_center
+
+
+So the plot at the location of well bottom shows the cone of depression and the maximum effect.
+
+#+BEGIN_SRC python :results file :wrap center :exports both :tangle yes
+plot_x_section(ext='png', row=20)
 #+END_SRC
 
-#+BEGIN_SRC python :results none
-plot_x_section(column=60)
+#+RESULTS[cd696461141dfc1e64f59aedaea0e7748c1b5571]:
+#+begin_center
+[[file:./images/3_section_row-20.png]]
+#+end_center
+
+This section shows the effect of well and how it is mostly in the 3rd geo layer, as well as how the effect extends to the river farther away but not the trout stream. We can see the isolines move towards the river through break in the clay layer showing the effect.
+
+#+BEGIN_SRC python :results file :wrap center :exports both :tangle yes
+plot_x_section(ext='png', column=60)
 #+END_SRC
+
+#+RESULTS[c6a4f64d6d812812aded97763f63b5c4e8feea6a]:
+#+begin_center
+[[file:./images/3_section_column-60.png]]
+#+end_center
+
+This column section doesn't show much except it's pretty much symmetric.
 
 ** Zone Budge and effect of Well
 
 Now let's define zone for trout stream, will use top 2 layers.
 
 Here ZONE_2 will be the trout stream and everything else will be ZONE_1.
-#+begin_src python
+#+BEGIN_SRC python :results none :exports code :tangle yes
 zones = np.ones((NLay, NR, NC), dtype=int)
 for p in get_grid_points(stream, layers=[0, 1]):
     zones[p] = 2
-#+end_src
+#+END_SRC
+
 
 we can make a zonebudget model from the previous modflow model.
-#+begin_src python
+#+BEGIN_SRC python :results none :exports code :tangle yes
 bm = gwf.output.zonebudget(zones)
 
 bm.change_model_name(name)
 bm.change_model_ws(ws)
-#+end_src
+#+END_SRC
+
 
 There seems to be a bug in write input method for budget model as I had to edit the output zbnam file to add grb file manually. So only run exisiting model files, don't write it unless you change the zone arr, in that case write it and manually add grb file again.
 
-#+begin_src python
+#+BEGIN_SRC python :results none :exports code :tangle yes
 # bm.write_input()
 bm.run_model(exe_name='modflow-zbud6')
-#+end_src
+#+END_SRC
 
 The .zbnam file must have following contents:
 #+begin_src text
@@ -427,12 +584,32 @@ BEGIN ZONEBUDGET
   BUD   3_water_wd.bud
   GRB   3_water_wd.dis.grb
 END ZONEBUDGET
-#+end_src
+#+END_SRC
 
 
 With that we can get the water budget.
-#+begin_src python
+#+BEGIN_SRC python :exports both :tangle yes
 bm.get_budget()
+#+END_SRC
+
+#+RESULTS[7235130f61d9c5697d805b5ee0c98511f8631458]:
+#+begin_src text
+| 1 | 0 | 0 | DATA_SPDIS_IN  |              0 |              0 |
+| 1 | 0 | 0 | WEL_IN         |              0 |              0 |
+| 1 | 0 | 0 | RIV_IN         |              0 |              0 |
+| 1 | 0 | 0 | RCH_IN         | 82054.91349999 |              0 |
+| 1 | 0 | 0 | CHD_IN         |  1681.44259246 |              0 |
+| 1 | 0 | 0 | DATA_SPDIS_OUT |              0 |              0 |
+| 1 | 0 | 0 | WEL_OUT        |     38499.8688 |              0 |
+| 1 | 0 | 0 | RIV_OUT        |              0 |              0 |
+| 1 | 0 | 0 | RCH_OUT        |              0 |              0 |
+| 1 | 0 | 0 | CHD_OUT        | 24587.20372615 | 20695.35801522 |
+| 1 | 0 | 0 | FROM_ZONE_0    |              0 |              0 |
+| 1 | 0 | 0 | FROM_ZONE_1    |              0 | 20695.35801522 |
+| 1 | 0 | 0 | FROM_ZONE_2    |              0 |              0 |
+| 1 | 0 | 0 | TO_ZONE_0      |              0 |              0 |
+| 1 | 0 | 0 | TO_ZONE_1      |              0 |              0 |
+| 1 | 0 | 0 | TO_ZONE_2      | 20695.35801522 |              0 |
 #+end_src
 
 Without well:
