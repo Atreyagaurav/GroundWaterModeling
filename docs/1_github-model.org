@@ -1,9 +1,9 @@
+# -*- org-export-use-babel: nil -*-
 #+TITLE: Github Example for Flopy
 #+AUTHOR: Gaurav Atreya
 #+LATEX_CLASS: unisubmission
 #+LATEX_CLASS_OPTIONS: [titlepage,12pt]
 
-#+OPTIONS: num:nil
 #+OPTIONS: toc:nil
 
 #+LATEX_HEADER: \ClassCode{GEOL 6024}
@@ -16,15 +16,16 @@
 #+LATEX_HEADER: \Mnumber{M14001485}
 #+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
 
-# #+TOC: headlines 2
-
-* Github Example
+#+TOC: headlines 2
 
 Link: https://github.com/modflowpy/flopy
-** Introduction
-This model is very basic model on a simple grid to show what flopy can do, and be familiar with the functions and classes in flopy.
 
-** Code
+* Introduction
+This model is very basic model on a simple grid to show what flopy can do, and be familiar with the functions and classes in flopy. We'll use the model from the flopy github readme, and make and run the model. It's mostly to confirm your installation of modflow and flopy are correct and any code we write for other exercises will be run properly.
+
+* Code
+
+** Importing Libraries
 First Let's load libraries, flopy is the flopy library and matplotlib is for plotting the plots, flopy also uses this internally for the plots.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -32,8 +33,7 @@ import flopy
 import matplotlib.pyplot as plt
 #+END_SRC
 
-
-
+** Flopy model
 We also need to define the working directories flopy will save the modflow model in that directory with given name. Here we also give the exe_name which is the modflow executable to be called for simulation.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -72,9 +72,6 @@ chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=[[(0, 0, 0), 1.],
                                                        [(0, 9, 9), 0.]])
 #+END_SRC
 
-
-
-
 Now the oc package will be used to give the filenames for where the results will be saved. We can load these files directly and use the data next time if running model everytime is troublesome.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -86,18 +83,18 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
                             saverecord=[('HEAD', 'ALL'), ('BUDGET', 'ALL')])
 #+END_SRC
 
-
-
 After we have all the packages we use ~write_simulation()~ function to write the files for the simulation that will be used my modflow when we use ~run_simulation()~.
+
 #+BEGIN_SRC python :cache no :exports both :tangle yes
 sim.write_simulation()
 sim.run_simulation()
 #+END_SRC
 
-#+RESULTS[cd6a59cd8de61789adcd93ab9f089148574fcf4a]:
+#+RESULTS:
 #+begin_src text
 | True | nil |
 #+end_src
+
 
 The output of ~run_simulation()~ is ~True~, hence the model run was successful.
 
@@ -125,7 +122,6 @@ pmv.contour_array(head, levels=[.2, .4, .6, .8], linewidths=3.)
 pmv.plot_vector(qx, qy, normalize=True, color="white")
 #+END_SRC
 
-
 If you want to save the figure use this. You can save png or pdf. You can use ~plt.show()~ to view it.
 #+BEGIN_SRC python :results none :exports code :tangle yes
 plt.savefig("./images/1_results_plan.pdf")
@@ -135,3 +131,64 @@ plt.show()
 [[./images/1_results_plan.pdf]]
 
 We got the result which is same as that in the example. So it was a success.
+
+** Zone budget
+We hadn't imported numpy so let's do that.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
+import numpy as np
+#+END_SRC
+
+We'll make a array with same shape as grid and put some arbitrary cells as different zones.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
+zones = np.ones((10, 10), dtype=int)
+zones[(1, 1)] = 2
+zones[(2, 2)] = 2
+zones[(7, 7)] = 3
+zones[(8, 8)] = 3
+#+END_SRC
+
+Make a zonebudget model.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
+bm = gwf.output.zonebudget(zones)
+bm.change_model_name(name)
+bm.change_model_ws(ws)
+#+END_SRC
+
+Write input files and run it.
+
+#+BEGIN_SRC python :exports both :tangle yes
+bm.write_input()                # see NOTE
+bm.run_model(exe_name='modflow-zbud6')
+#+END_SRC
+
+#+RESULTS[8e7756eb29626c1d588df704f696eb9e4c9a77c6]:
+#+begin_src text
+| True | nil |
+#+end_src
+
+NOTE: The ~bm.write_input()~ has a bug and doesn't write the grb file and it'll end up being an error. [[https://github.com/modflowpy/flopy/issues/1395][I brought it to the attention of the developers and they've fixed it]]. But it's not yet available to the pip version 3.3.5. If the next version isn't yet released when you're trying out, then you can install the git's latest version with ~pip install --upgrade git+https://github.com/modflowpy/flopy.git~ in your terminal.
+
+Now we can get the zonebudget for the model.
+
+#+BEGIN_SRC python :exports both :tangle yes
+bm.get_budget()
+#+END_SRC
+
+#+RESULTS[1e6553dff3186fcddf2b7cec87f211d38e314055]:
+#+begin_src text
+| 1 | 0 | 0 | DATA_SPDIS_IN  |          0 |          0 |          0 |
+| 1 | 0 | 0 | CHD_IN         | 0.33205402 |          0 |          0 |
+| 1 | 0 | 0 | DATA_SPDIS_OUT |          0 |          0 |          0 |
+| 1 | 0 | 0 | CHD_OUT        | 0.33204178 |          0 |          0 |
+| 1 | 0 | 0 | FROM_ZONE_0    |          0 |          0 |          0 |
+| 1 | 0 | 0 | FROM_ZONE_1    |          0 |   0.214903 | 0.21490513 |
+| 1 | 0 | 0 | FROM_ZONE_2    | 0.21488982 |          0 |          0 |
+| 1 | 0 | 0 | FROM_ZONE_3    | 0.21490489 |          0 |          0 |
+| 1 | 0 | 0 | TO_ZONE_0      |          0 |          0 |          0 |
+| 1 | 0 | 0 | TO_ZONE_1      |          0 | 0.21488982 | 0.21490489 |
+| 1 | 0 | 0 | TO_ZONE_2      |   0.214903 |          0 |          0 |
+| 1 | 0 | 0 | TO_ZONE_3      | 0.21490513 |          0 |          0 |
+#+end_src

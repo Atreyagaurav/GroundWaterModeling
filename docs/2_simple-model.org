@@ -1,9 +1,9 @@
+# -*- org-export-use-babel: nil -*-
 #+TITLE: Simple MODFLOW Model in Flopy
 #+AUTHOR: Gaurav Atreya
 #+LATEX_CLASS: unisubmission
 #+LATEX_CLASS_OPTIONS: [titlepage,12pt]
 
-#+OPTIONS: num:nil
 #+OPTIONS: toc:nil
 
 #+LATEX_HEADER: \ClassCode{GEOL 6024}
@@ -16,16 +16,17 @@
 #+LATEX_HEADER: \Mnumber{M14001485}
 #+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
 
-# #+TOC: headlines 2
+#+TOC: headlines 2
 
-* Simple model
-
-** Introduction
+* Introduction
 There are two drains in this model, and there is constant recharge that'll travel through the model to those drains and we're going to model it and see the water table and such.
 
 
-** Code
+* Code
+
+** Importing Libraries
 Importing the libraries, here numpy is imported to use its functions which are really good with numbers.
+
 #+BEGIN_SRC python :results none :exports code :tangle yes
 import flopy
 
@@ -33,7 +34,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #+END_SRC
 
-
+** Function for Stress Period
 Let's define a function which will loop through the grids at the edge and return the grid id as well as heads at those grids for the chd package.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -44,8 +45,9 @@ def get_chd_stress_period():
         yield ((0, i, 39), 3824)
 #+END_SRC
 
-
 Here we'll define the working directory, model name and the executable for modflow.
+
+** Flopy Model
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
 ws = './models/2_simple_model'
@@ -54,16 +56,16 @@ name = '2_simple_model'
 sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name='modflow-mf6')
 #+END_SRC
 
-
 Let's define the packages like in other model.
+
 #+BEGIN_SRC python :results none :exports code :tangle yes
 tdis = flopy.mf6.ModflowTdis(sim)
 ims = flopy.mf6.ModflowIms(sim)
 gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
 #+END_SRC
 
-
 Here in dis package we're going to define the grid, let's use 60x40 grid will 50m spacing in between. And 10 vertical layers. The ~botm~ parameter needs the bottom elevation of the layers, we'll use numpy to generate a uniformly spaced intervals from it.
+
 #+BEGIN_SRC python :results none :exports code :tangle yes
 dis = flopy.mf6.ModflowGwfdis(gwf,
                               nlay=10,
@@ -75,7 +77,6 @@ dis = flopy.mf6.ModflowGwfdis(gwf,
                               botm=np.linspace(3832, 3600, 11)[1:])
 #+END_SRC
 
-
 For the initial head using the top elevation is a good idea, so we'll do that. ~np.ones~ will give us a grid filled with value of ~1~ and then we'll multiply with the top elevation, for the grids in the constant head boundaries we'll replace their values from the function.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -85,7 +86,6 @@ for gp, head in get_chd_stress_period():
 ic = flopy.mf6.ModflowGwfic(gwf, strt=initial_head)
 #+END_SRC
 
-
 Now let's define the recharge, the value obtained here is after dividing the recharge per year by 365 as our default time unit is in days.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -93,7 +93,6 @@ ic = flopy.mf6.ModflowGwfic(gwf)
 
 recharge = flopy.mf6.ModflowGwfrcha(gwf, recharge=0.0055)
 #+END_SRC
-
 
 Now let's define a constant hydraulic conductivity of 4.0 m/day. And the chd package will use the output from the function defined previously.
 
@@ -106,7 +105,6 @@ chd = flopy.mf6.ModflowGwfchd(
     stress_period_data=list(get_chd_stress_period()))
 #+END_SRC
 
-
 Now let's define the files to save the results in.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -118,7 +116,6 @@ oc = flopy.mf6.ModflowGwfoc(gwf,
                             saverecord=[('HEAD', 'ALL'), ('BUDGET', 'ALL')])
 #+END_SRC
 
-
 finally writing and running the simulation.
 
 #+BEGIN_SRC python :exports both :tangle yes
@@ -126,10 +123,12 @@ sim.write_simulation()
 sim.run_simulation()
 #+END_SRC
 
-#+RESULTS[d5efa5c41041b6f0c35d1df0663296722ca2915e]:
+#+RESULTS[e733ccb08c295d3e49a8dd30722a13a23f5f37e9]:
 #+begin_src text
 | True | nil |
 #+end_src
+
+** Simulation Outputs
 
 Since our run was successful we can extract the values we want.
 #+BEGIN_SRC python :results none :exports code :tangle yes
@@ -137,14 +136,15 @@ head_arr = gwf.output.head().get_data()
 bud = gwf.output.budget()
 #+END_SRC
 
-
 Post processing tool to get the specific discharges.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
+watertable = flopy.utils.postprocessing.get_water_table(head_arr, -1e30)
 spdis = bud.get_data(text='DATA-SPDIS')[0]
 qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 #+END_SRC
 
+** Plots
 
 Now we can plot the results here.
 
@@ -155,12 +155,12 @@ pmv.plot_grid(colors='white', linewidths=0.3)
 pmv.contour_array(head_arr, linewidths=1., c_label=True, cmap='Wistia')
 # flopy.plot.styles.graph_legend()
 pmv.plot_vector(qx, qy, normalize=True, color="white")
-plt.savefig("./images/2_plan.pdf")
+plt.savefig("./images/2_plan.png")
 
 plt.show()
 #+END_SRC
 
-[[./images/2_plan.pdf]]
+[[./images/2_plan.png]]
 
 The head is higher on the middle parts and the contours are aligned with Y-axis meaning the groundwater is flowing in the direction of X-axis. Since the constant head we provided was symmetrical to X-axis this makes sense.
 
@@ -197,10 +197,10 @@ def plot_x_section(**kwargs):
                               color='blue')
 
     filename = "_".join((f'{k}-{v}' for k, v in kwargs.items()))
-    plt.savefig(f"./images/2_section_{filename}.pdf")
+    ax.plot(50*np.array(range(40)), watertable[20,:])
+    plt.savefig(f"./images/2_section_{filename}.png")
     plt.show()
 #+END_SRC
-
 
 And using that function we can look at the sectional view at 20th row.
 
@@ -208,6 +208,21 @@ And using that function we can look at the sectional view at 20th row.
 plot_x_section(row=20)
 #+END_SRC
 
-[[./images/2_section_row-20.pdf]]
+[[./images/2_section_row-20.png]]
 
-We can see the water flows towards the constant heads that are acting like drains, and the water table is higher on the central part. 
+We can see the water flows towards the constant heads that are acting like drains, and the water table is higher on the central part.
+
+This plot does show the vertical distribution of the head values but it's hard to visualize the watertable in that section because it's compressed so let's try that on a different plot.
+
+#+BEGIN_SRC python :results none :exports code :tangle yes
+plt.plot(50*np.array(range(40)), watertable[20,:])
+plt.savefig("./images/2_watertable_row-20.png")
+plt.show()
+#+END_SRC
+
+[[./images/2_watertable_row-20.png]]
+
+It is exaggerated, if we make it the same range on the elevation like in that section plot we can see the variation is mild, it varies from 3820 to 3826, which is a lot if we only plot are near the surface, but not much can be seen when we plot overall plot. 
+
+* Discussions
+One thing very important we can realize in this exercise is that using hard-coded numbers everywhere makes it hard to change grid sizes since we also have to modify it everywhere, so from next exercises we'll be defining some utility functions and simulation parameters, and using them for the overall script, so we only have to modify them at the beginning, and we can change any aspect of the simulation easily.

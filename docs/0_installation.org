@@ -1,0 +1,79 @@
+# -*- org-export-use-babel: nil -*-
+#+TITLE: Installing MODFLOW for Flopy
+#+AUTHOR: Gaurav Atreya
+#+LATEX_CLASS: unisubmission
+#+LATEX_CLASS_OPTIONS: [titlepage,12pt]
+
+#+OPTIONS: toc:nil
+
+#+LATEX_HEADER: \ClassCode{GEOL 6024}
+#+LATEX_HEADER: \ClassName{GroundWater Modeling}
+#+LATEX_HEADER: \ActivityType{Project}
+#+LATEX_HEADER: \SubmissionType{Report}
+#+LATEX_HEADER: \SubmissionNumber{0}
+#+LATEX_HEADER: \SubmissionName{Installing MODFLOW for Flopy}
+#+LATEX_HEADER: \Author{Gaurav Atreya}
+#+LATEX_HEADER: \Mnumber{M14001485}
+#+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
+
+#+TOC: headlines 2
+
+* How to install modflow for flopy
+  Flopy is a python program which only handles the input and output from modflow, so it doesn't have the capacity to do the simulation itself. Hence you need to tell it where to find the modflow program so it can send the files to that program.
+
+** Download as zip
+   You can download the zip files for modflow From here:
+   https://www.usgs.gov/software/modflow-6-usgs-modular-hydrologic-model
+
+   The current version of MODFLOW 6 is version 6.2.2, released July 30, 2021.
+
+   The downloaded zip has following files when you unzip it.
+#+begin_src bash
+unzip -l ~/Downloads/mf6.2.2.zip 
+#+end_src
+
+#+begin_src text
+  mf6.2.2/
+|-- bin		# contains mf6.exe executable
+|-- doc		# contains pdfs
+|-- examples	# contains a lot of examples
+|-- make	# contains make files
+|-- msvs	# contains Visual Studio solution/project
+|-- src		# conaints the fortran source codes
+|-- srcbmi	# same as prev
+`-- utils	# contains utility programs/codes
+#+end_src
+
+You only need the file ~mf6.exe~ in the ~/bin~ directory to connect to the flopy. 
+  
+** Compile it from source code
+   You can compile the modflow code with fortran compiler to build the executables.
+
+   Using pymake from modflowpy makes it a bit easier. You can read the instructions here:
+
+   https://github.com/modflowpy/pymake
+
+
+   Run this in your terminal to install pymake.
+#+begin_src bash
+pip install mfpymake  
+#+end_src
+
+Then use this code in python to build all the modflow apps.
+#+begin_src python
+import pymake
+
+pymake.build_apps()
+#+end_src
+
+You can choose to build only modflow 6.
+
+Read the instructions in github for more information on that. Or read the documentation at https://mfpymake.readthedocs.io/en/latest/
+
+* Flopy installation
+  To install flopy you can use pip.
+  #+begin_src bash
+pip install flopy
+  #+end_src
+
+  You can also install it through conda or similar package managers for python.

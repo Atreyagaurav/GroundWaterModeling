@@ -1,3 +1,4 @@
+# -*- org-export-use-babel: nil -*-
 #+TITLE: Water Withdrawal Controversy
 #+AUTHOR: Gaurav Atreya
 #+LATEX_CLASS: unisubmission
@@ -20,6 +21,8 @@
 * Introduction
 
 Prairie Valley Water is installing a high-capacity well to support the expanded bottled water operations. But the company's permit is denied by the state because the state’s water withdrawal assessment tool predicted that their proposed well could adversely impact the nearby trout stream. The company argues that their well will pump deep groundwater which will have no impact on what happens at the surface. 
+
+  [[./images/tutorial-3-site.png]]
 
 Here, we're going to make a groundwater model based on the given situation. Since we can't know for sure how much water will flow in the river and the stream as they have upstream contributions, we'll look at the rainwater contributions to the stream from the given area, and compare how much rainwater recharge to the stream when there is well compared to when there was no well.
 
@@ -549,7 +552,7 @@ plot_x_section(ext='png', column=60)
 
 This column section doesn't show much except it's pretty much symmetric.
 
-** Zone Budge and effect of Well
+** Zone Budget and effect of Well
 
 Now let's define zone for trout stream, will use top 2 layers.
 
@@ -573,11 +576,14 @@ bm.change_model_ws(ws)
 There seems to be a bug in write input method for budget model as I had to edit the output zbnam file to add grb file manually. So only run exisiting model files, don't write it unless you change the zone arr, in that case write it and manually add grb file again.
 
 #+BEGIN_SRC python :results none :exports code :tangle yes
-# bm.write_input()
+bm.write_input()
 bm.run_model(exe_name='modflow-zbud6')
 #+END_SRC
 
+NOTE: The ~bm.write_input()~ has a bug and doesn't write the grb file and it'll end up being an error. [[https://github.com/modflowpy/flopy/issues/1395][I brought it to the attention of the developers and they've fixed it]]. But it's not yet available to the pip version 3.3.5. If the next version isn't yet released when you're running this code, then you can install the git's latest version with ~pip install --upgrade git+https://github.com/modflowpy/flopy.git~ in your terminal. Or manually edit it.
+
 The .zbnam file must have following contents:
+
 #+begin_src text
 BEGIN ZONEBUDGET
   ZON   3_water_wd.zon
@@ -586,30 +592,16 @@ BEGIN ZONEBUDGET
 END ZONEBUDGET
 #+END_SRC
 
+If it doesn't have it, then either do latest install from github or edit the content of the file yourself and remove the ~bm.write_input()~ line from the code so it won't overwrite your edits. You have to write inputs if you change zones, or your grid settings and edit the file manually again.
+I'd recommend just installing the latest code from github so you don't have to.
 
 With that we can get the water budget.
 #+BEGIN_SRC python :exports both :tangle yes
 bm.get_budget()
 #+END_SRC
 
-#+RESULTS[7235130f61d9c5697d805b5ee0c98511f8631458]:
+#+RESULTS[65ddd4c2d05d7ffe98f6cdeeba7c9ca22f801c4f]:
 #+begin_src text
-| 1 | 0 | 0 | DATA_SPDIS_IN  |              0 |              0 |
-| 1 | 0 | 0 | WEL_IN         |              0 |              0 |
-| 1 | 0 | 0 | RIV_IN         |              0 |              0 |
-| 1 | 0 | 0 | RCH_IN         | 82054.91349999 |              0 |
-| 1 | 0 | 0 | CHD_IN         |  1681.44259246 |              0 |
-| 1 | 0 | 0 | DATA_SPDIS_OUT |              0 |              0 |
-| 1 | 0 | 0 | WEL_OUT        |     38499.8688 |              0 |
-| 1 | 0 | 0 | RIV_OUT        |              0 |              0 |
-| 1 | 0 | 0 | RCH_OUT        |              0 |              0 |
-| 1 | 0 | 0 | CHD_OUT        | 24587.20372615 | 20695.35801522 |
-| 1 | 0 | 0 | FROM_ZONE_0    |              0 |              0 |
-| 1 | 0 | 0 | FROM_ZONE_1    |              0 | 20695.35801522 |
-| 1 | 0 | 0 | FROM_ZONE_2    |              0 |              0 |
-| 1 | 0 | 0 | TO_ZONE_0      |              0 |              0 |
-| 1 | 0 | 0 | TO_ZONE_1      |              0 |              0 |
-| 1 | 0 | 0 | TO_ZONE_2      | 20695.35801522 |              0 |
 #+end_src
 
 Without well:
