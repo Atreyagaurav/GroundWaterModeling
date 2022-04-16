@@ -8,12 +8,16 @@ In this repo there are 4 models written in python that does different things in 
 
 ** Contents
 
-- [[./docs/0_installation.org][installation]]
-- [[./docs/1_github-model.org][github-model]]
-- [[./docs/2_simple-model.org][simple-model]]
-- [[./docs/3_water-withdrawal-controversy.org][water-withdrawal-controversy]]
-- [[./docs/4_calibration.org][calibration]]
+- [[./docs/0_installation.org][installation]] : How to install MODFLOW and Flopy
+- [[./docs/1_github-model.org][github-model]] : A simple model to test flopy is installed.
+- [[./docs/2_simple-model.org][simple-model]] : Simple Modflow model to get familiar with GW simulation.
+- [[./docs/3_water-withdrawal-controversy.org][water-withdrawal-controversy]] : A little more complex model to get zone budget from simulation.
+- [[./docs/4_calibration.org][calibration]] : Example for calibrating a model made in flopy using python.
 
   
 ** Declaimer
 The problem statements used in the modeling of this exercises comes from [[https://www.magnet4water.net/FeaturedProblems.aspx?CategoryId=47][magnet4water curriculum]]. Once all those problems were solved from the magnet website's cloud platform, same things was tried to achieved using flopy to compare the results as well as overall difficulties of making the models. I have no association with both and all of this was done for learning purposes.
+
+
+** NOTES
+The links for the plots and images in each org files does work in a PC but I think github doesn't yet support symlink navigation even if it can have symlink files in the repo, hence the links appear broken.
