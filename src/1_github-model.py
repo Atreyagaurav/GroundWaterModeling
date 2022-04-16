@@ -40,3 +40,20 @@ pmv.plot_vector(qx, qy, normalize=True, color="white")
 
 plt.savefig("./images/1_results_plan.pdf")
 plt.show()
+
+import numpy as np
+
+zones = np.ones((10, 10), dtype=int)
+zones[(1, 1)] = 2
+zones[(2, 2)] = 2
+zones[(7, 7)] = 3
+zones[(8, 8)] = 3
+
+bm = gwf.output.zonebudget(zones)
+bm.change_model_name(name)
+bm.change_model_ws(ws)
+
+bm.write_input()                # see NOTE
+bm.run_model(exe_name='modflow-zbud6')
+
+bm.get_budget()

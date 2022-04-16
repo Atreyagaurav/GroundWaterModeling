@@ -1,0 +1,93 @@
+% Created 2022-04-15 Fri 13:52
+% Intended LaTeX compiler: pdflatex
+\documentclass[titlepage,12pt]{unisubmission}
+	     \usepackage{booktabs}
+	     \ClassCode{GEOL 6024}
+\ClassName{GroundWater Modeling}
+\ActivityType{Project}
+\SubmissionType{Report}
+\SubmissionNumber{0}
+\SubmissionName{Installing MODFLOW for Flopy}
+\Author{Gaurav Atreya}
+\Mnumber{M14001485}
+\Keywords{Groundwater,Modeling,Flopy}
+\author{Gaurav Atreya}
+\date{\today}
+\title{Installing MODFLOW for Flopy}
+\hypersetup{
+ pdfauthor={Gaurav Atreya},
+ pdftitle={Installing MODFLOW for Flopy},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 28.1 (Org mode 9.5.2)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+\section{How to install modflow for flopy}
+\label{sec:org7d4c582}
+Flopy is a python program which only handles the input and output from modflow, so it doesn't have the capacity to do the simulation itself. Hence you need to tell it where to find the modflow program so it can send the files to that program.
+
+\subsection{Download as zip}
+\label{sec:org7d2e5f1}
+You can download the zip files for modflow From here:
+\url{https://www.usgs.gov/software/modflow-6-usgs-modular-hydrologic-model}
+
+The current version of MODFLOW 6 is version 6.2.2, released July 30, 2021.
+
+The downloaded zip has following files when you unzip it.
+\begin{minted}[]{bash}
+unzip -l ~/Downloads/mf6.2.2.zip 
+\end{minted}
+
+\begin{minted}[]{text}
+  mf6.2.2/
+|-- bin		# contains mf6.exe executable
+|-- doc		# contains pdfs
+|-- examples	# contains a lot of examples
+|-- make	# contains make files
+|-- msvs	# contains Visual Studio solution/project
+|-- src		# conaints the fortran source codes
+|-- srcbmi	# same as prev
+`-- utils	# contains utility programs/codes
+\end{minted}
+
+You only need the file \texttt{mf6.exe} in the \texttt{/bin} directory to connect to the flopy. 
+
+\subsection{Compile it from source code}
+\label{sec:orga83b5ce}
+You can compile the modflow code with fortran compiler to build the executables.
+
+Using pymake from modflowpy makes it a bit easier. You can read the instructions here:
+
+\url{https://github.com/modflowpy/pymake}
+
+
+Run this in your terminal to install pymake.
+\begin{minted}[]{bash}
+pip install mfpymake  
+\end{minted}
+
+Then use this code in python to build all the modflow apps.
+\begin{minted}[]{python}
+import pymake
+
+pymake.build_apps()
+\end{minted}
+
+You can choose to build only modflow 6.
+
+Read the instructions in github for more information on that. Or read the documentation at \url{https://mfpymake.readthedocs.io/en/latest/}
+
+\section{Flopy installation}
+\label{sec:orgb19794f}
+To install flopy you can use pip.
+\begin{minted}[]{bash}
+pip install flopy
+\end{minted}
+
+You can also install it through conda or similar package managers for python.
+\end{document}

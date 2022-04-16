@@ -314,7 +314,7 @@ bm = gwf.output.zonebudget(zones)
 bm.change_model_name(name)
 bm.change_model_ws(ws)
 
-# bm.write_input()
+bm.write_input()
 bm.run_model(exe_name='modflow-zbud6')
 
 bm.get_budget()
