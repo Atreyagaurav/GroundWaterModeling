@@ -22,7 +22,7 @@ The problem statements used in the modeling of this exercises comes from [[https
 ** NOTES
 The links for the plots and images in each org files does work in a PC but I think github doesn't yet support symlink navigation even if it can have symlink files in the repo, hence the links appear broken.
 
-Do browse the [[./docs]] folder for final rendered pdfs which should have everything well formatted. And for running the code, if you use Gnu emacs then you can use the org files directly, as well as generate .py, .tex, .pdf from it (or just about any format I guess).
+Do browse the [[./docs]] folder for final rendered pdfs which should have everything well formatted. And for running the code, if you use [[https://www.gnu.org/software/emacs/][gnu emacs]] then you can use the org files directly, as well as generate .py, .tex, .pdf from it (or just about any format I guess).
 
 But if you don't I have tangled the source codes as python scripts in [[./src]] directory, and the .tex and .pdf are in [[./docs]] directory. The plots are in [[./images]] directory, which are used by and saved to there by all scripts whether in org files or not.
 

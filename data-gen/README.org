@@ -1,0 +1,5 @@
+* Python scripts to generate data
+
+These scripts are for generating data for the simulation problems.
+
+It's currently not used by any other scripts, though there are shapefiles made from this in the [[../data]] directory for visualizations purposes if you fancy GIS softwares.

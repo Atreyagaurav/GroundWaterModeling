@@ -1,0 +1,6 @@
+* [[http://www.gnuplot.info/][Gnuplot]] Scripts for plotting
+
+These scripts are gnuplot scripts, you can download the gnuplot program for free. The scripts can automatically generate the plots for you and you can add those to documents.
+
+Please run these from the project root. Output files are not specified so that you can do it with your preferences.
+

@@ -1,0 +1,2 @@
+* Images generated from plotting programs
+Here are the images/graphics in ~.png~ or ~.pdf~ formats that were generated from gnuplot or matplotlib, most of them are being used in the documentations, if you run the scripts from project root, or through the org files the plots will be saved here automatically. 

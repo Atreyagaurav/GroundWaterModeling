@@ -1,7 +1,12 @@
 * Tutorial python source files
   This tutorial files are written in python using flopy.
 
-  
-* Tutorial 3
-  This was coded based on the input files for modflow.
-  
+  These are tangled from the org files in [[../docs]] directory, so make sure to run these from the project root. Except for [[./4_batch.py]] which is batch version of model 4, modified from the original script to include loops, If you end up changing things in model 4, do change the same thing in this file too.
+
+  For example, you can run any of them like this:
+
+#+begin_src bash
+python src/1_github-model.py  
+#+end_src
+
+The utils.py file is not being used to make the each org files as well as documentation self contained. Original idea was to put all the utility functions there and just import it.

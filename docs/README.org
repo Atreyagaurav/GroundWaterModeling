@@ -1,0 +1,7 @@
+* Documentations
+
+Here are the original org files that contain the explanation as well as the codes and outputs, you can directly browse them in github, or you can open them in [[https://www.gnu.org/software/emacs/][gnu emacs]] where you can run the code, see the output, as well as export it into plethora of formats.
+
+There are LaTeX files and Pdf files generated from the org files for people who prefer one of those.
+
+The python script files tangled from the org files are in the [[../src]] directory.
