@@ -17,6 +17,14 @@
 #+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
 
 #+TOC: headlines 2
+** Table of contents                                         :TOC:noexport:
+- [[#introduction][Introduction]]
+- [[#code][Code]]
+  - [[#importing-libraries][Importing libraries]]
+  - [[#simulation-parameters][Simulation Parameters]]
+  - [[#utility-functions-and-pre-processing][Utility Functions and Pre-processing]]
+  - [[#flopy-model][Flopy Model]]
+  - [[#zone-budget-and-effect-of-well][Zone Budget and effect of Well]]
 
 * Introduction
 

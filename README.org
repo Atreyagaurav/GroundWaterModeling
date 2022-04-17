@@ -1,5 +1,12 @@
 * Groundwater Simulations Using Flopy
 
+** Table of contents                                         :TOC:noexport:
+- [[#groundwater-simulations-using-flopy][Groundwater Simulations Using Flopy]]
+  - [[#introduction][Introduction]]
+  - [[#contents][Contents]]
+  - [[#declaimer][Declaimer]]
+  - [[#notes][NOTES]]
+
 ** Introduction
 
 [[https://github.com/modflowpy/flopy][Flopy]] is a python library which can interact with [[https://www.usgs.gov/software/modflow-6-usgs-modular-hydrologic-model][MODFLOW]] program for you. It can be used to make the models, the files and to do the postprocessing of the results from modeflow output.

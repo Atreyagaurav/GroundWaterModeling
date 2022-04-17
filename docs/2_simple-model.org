@@ -17,6 +17,15 @@
 #+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
 
 #+TOC: headlines 2
+** Table of contents                                         :TOC:noexport:
+- [[#introduction][Introduction]]
+- [[#code][Code]]
+  - [[#importing-libraries][Importing Libraries]]
+  - [[#function-for-stress-period][Function for Stress Period]]
+  - [[#flopy-model][Flopy Model]]
+  - [[#simulation-outputs][Simulation Outputs]]
+  - [[#plots][Plots]]
+- [[#discussions][Discussions]]
 
 * Introduction
 There are two drains in this model, and there is constant recharge that'll travel through the model to those drains and we're going to model it and see the water table and such.

@@ -17,8 +17,12 @@
 #+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
 
 #+TOC: headlines 2
-
-Link: https://github.com/modflowpy/flopy
+** Table of contents                                         :TOC:noexport:
+- [[#introduction][Introduction]]
+- [[#code][Code]]
+  - [[#importing-libraries][Importing Libraries]]
+  - [[#flopy-model][Flopy model]]
+  - [[#zone-budget][Zone budget]]
 
 * Introduction
 This model is very basic model on a simple grid to show what flopy can do, and be familiar with the functions and classes in flopy. We'll use the model from the flopy github readme, and make and run the model. It's mostly to confirm your installation of modflow and flopy are correct and any code we write for other exercises will be run properly.

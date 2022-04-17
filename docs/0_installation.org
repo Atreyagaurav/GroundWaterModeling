@@ -17,6 +17,11 @@
 #+LATEX_HEADER: \Keywords{Groundwater,Modeling,Flopy}
 
 #+TOC: headlines 2
+** Table of contents                                         :TOC:noexport:
+- [[#how-to-install-modflow-for-flopy][How to install modflow for flopy]]
+  - [[#download-as-zip][Download as zip]]
+  - [[#compile-it-from-source-code][Compile it from source code]]
+- [[#flopy-installation][Flopy installation]]
 
 * How to install modflow for flopy
   Flopy is a python program which only handles the input and output from modflow, so it doesn't have the capacity to do the simulation itself. Hence you need to tell it where to find the modflow program so it can send the files to that program.
