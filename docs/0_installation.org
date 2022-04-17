@@ -22,6 +22,7 @@
   - [[#download-as-zip][Download as zip]]
   - [[#compile-it-from-source-code][Compile it from source code]]
 - [[#flopy-installation][Flopy installation]]
+- [[#other-python-libraries][Other Python libraries]]
 
 * How to install modflow for flopy
   Flopy is a python program which only handles the input and output from modflow, so it doesn't have the capacity to do the simulation itself. Hence you need to tell it where to find the modflow program so it can send the files to that program.
@@ -82,3 +83,30 @@ pip install flopy
   #+end_src
 
   You can also install it through conda or similar package managers for python.
+
+  For models using zonebudget, there is a bug in flopy version 3.3.5. [[https://github.com/modflowpy/flopy/issues/1395][I brought it to the attention of the developers and they've fixed it]]. But it's not yet available to the pip version 3.3.5. If the next version isn't yet released when you're running this code, then you can install the git's latest version with the following command.
+  
+  #+begin_src bash
+pip install --upgrade git+https://github.com/modflowpy/flopy.git
+  #+end_src
+
+
+* Other Python libraries
+To install all other libraries at once you can use the list in ~requirements.txt~ file.
+
+Running this command in project root will install all requirements.
+  #+begin_src bash
+pip install -r requirements.txt
+  #+end_src
+
+  The contents of the file has following libraries:
+
+- numpy: For numerical analysis, used mostly for cell/layer properties
+- pandas: For reading/writing csv files
+- flopy: main flopy library
+- shapely: used for defining geometries and using GIS tools
+- matplotlib: used for plotting
+- scipy: for interpolation algorithm
+
+The geopandas is optional, it's only used in data-gen for generating shapefiles (I think).
+- geopandas: for reading writing shapefiles

@@ -14,6 +14,7 @@
 In this repo there are 4 models written in python that does different things in flopy all involving some groundwater simulation scenarios, and are in increasing order of difficulties.
 
 ** Contents
+These are the main scripts and instructions please go in order from first to last for better comprehension.
 
 - [[./docs/0_installation.org][installation]] : How to install MODFLOW and Flopy
 - [[./docs/1_github-model.org][github-model]] : A simple model to test flopy is installed.

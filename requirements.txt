@@ -1,0 +1,9 @@
+numpy
+pandas
+flopy
+shapely
+matplotlib
+scipy
+
+## Uncomment this if you want to run data-gen
+# geopandas
