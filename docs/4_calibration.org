@@ -31,6 +31,7 @@
   - [[#simulation-post-processing][Simulation Post Processing]]
   - [[#plots][Plots]]
 - [[#summary-of-calibration-trials][Summary of Calibration Trials]]
+- [[#export-to-vtk-format][Export to vtk format]]
 
 * Introduction
 
@@ -254,7 +255,7 @@ Here we can see how our calibration data is:
 calib_wells.head()
 #+END_SRC
 
-#+RESULTS[4b30e898f3f8bf3e1880bd26ef874d4fd728cc80]:
+#+RESULTS[37129a04118ab1c3720e0e3bd03ff012075955f7]:
 #+begin_src text
    well            x            y      h   weight
 0     1  1138.014528  1776.654749  12.10        1
@@ -270,13 +271,8 @@ And the grid points for the well that are obtained. The layer is not useful as w
 calib_wells_grid_pts[:5]
 #+END_SRC
 
-#+RESULTS[268cc384d68c7f2dec212c91a05c55fec883e462]:
+#+RESULTS[30135545215f603294005b9f10474bef56e8add9]:
 #+begin_src text
-| 0 | 15 | 38 |
-| 0 | 49 | 19 |
-| 0 | 11 | 16 |
-| 0 | 52 | 48 |
-| 0 | 51 | 16 |
 #+end_src
 
 ** Calibration Dependent Simulation Parameters
@@ -504,9 +500,9 @@ result,_ = sim.run_simulation()
 result
 #+END_SRC
 
-#+RESULTS[7620065eb3ff0aebbbfb3c295e62a688e941b989]:
+#+RESULTS[64b35975c9b33d51dc25601c84990a33b1b9047b]:
 #+begin_src text
-True
+False
 #+end_src
 
 This part here is not needed for the notebook, I'm putting it here so the tangled python script will end if simulation fails.
@@ -652,3 +648,16 @@ Most points are within 1σ of the 1:1 line, and all but 2 points are within the 
 
 This overall process and this model was extremely important on understanding the need of calibrating a model as a model is only good enough if it matches the observed data, and even then we can't trust the same model for other data that is wasn't calibrated for.
 
+
+* Export to vtk format
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+#+begin_src python :results none
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+#+end_src
+
+After running the code we get a ~.vtk~ file in the same directory as the model files, after that we can load it in Paraview, as seen in figure below.
+# TODO

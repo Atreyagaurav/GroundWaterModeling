@@ -23,6 +23,7 @@
   - [[#importing-libraries][Importing Libraries]]
   - [[#flopy-model][Flopy model]]
   - [[#zone-budget][Zone budget]]
+- [[#export-to-vtk-format][Export to vtk format]]
 
 * Introduction
 This model is very basic model on a simple grid to show what flopy can do, and be familiar with the functions and classes in flopy. We'll use the model from the flopy github readme, and make and run the model. It's mostly to confirm your installation of modflow and flopy are correct and any code we write for other exercises will be run properly.
@@ -168,7 +169,7 @@ bm.write_input()                # see NOTE
 bm.run_model(exe_name='modflow-zbud6')
 #+END_SRC
 
-#+RESULTS[8e7756eb29626c1d588df704f696eb9e4c9a77c6]:
+#+RESULTS[bfc455eac4cabe1520fc0622d6dea21621022e54]:
 #+begin_src text
 | True | nil |
 #+end_src
@@ -181,7 +182,7 @@ Now we can get the zonebudget for the model.
 bm.get_budget()
 #+END_SRC
 
-#+RESULTS[1e6553dff3186fcddf2b7cec87f211d38e314055]:
+#+RESULTS[65ddd4c2d05d7ffe98f6cdeeba7c9ca22f801c4f]:
 #+begin_src text
 | 1 | 0 | 0 | DATA_SPDIS_IN  |          0 |          0 |          0 |
 | 1 | 0 | 0 | CHD_IN         | 0.33205402 |          0 |          0 |
@@ -196,3 +197,18 @@ bm.get_budget()
 | 1 | 0 | 0 | TO_ZONE_2      |   0.214903 |          0 |          0 |
 | 1 | 0 | 0 | TO_ZONE_3      | 0.21490513 |          0 |          0 |
 #+end_src
+
+* Export to vtk format
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+#+begin_src python :results none
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+#+end_src
+
+After running the code we get a ~.vtk~ file in the same directory as the model files, after that we can load it in Paraview, as seen in figure below.
+
+#+CAPTION:Visualization of Heads in Paraview.
+[[./images/paraview-sc-1.png]]

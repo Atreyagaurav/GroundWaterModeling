@@ -1,4 +1,4 @@
-% Created 2022-04-15 Fri 14:41
+% Created 2022-04-25 Mon 14:41
 % Intended LaTeX compiler: pdflatex
 \documentclass[titlepage,12pt]{unisubmission}
 	     \usepackage{booktabs}
@@ -26,17 +26,16 @@
 \maketitle
 \setcounter{tocdepth}{2}
 \tableofcontents
-
 \section{Introduction}
-\label{sec:org7ee6559}
+\label{sec:org59d187b}
 There are two drains in this model, and there is constant recharge that'll travel through the model to those drains and we're going to model it and see the water table and such.
 
 
 \section{Code}
-\label{sec:orgd9abf57}
+\label{sec:org54c9b75}
 
 \subsection{Importing Libraries}
-\label{sec:org5c29155}
+\label{sec:org9927ece}
 Importing the libraries, here numpy is imported to use its functions which are really good with numbers.
 
 \begin{minted}[]{python}
@@ -47,7 +46,7 @@ import matplotlib.pyplot as plt
 \end{minted}
 
 \subsection{Function for Stress Period}
-\label{sec:orgdbbf1a4}
+\label{sec:org52b3262}
 Let's define a function which will loop through the grids at the edge and return the grid id as well as heads at those grids for the chd package.
 
 \begin{minted}[]{python}
@@ -61,7 +60,7 @@ def get_chd_stress_period():
 Here we'll define the working directory, model name and the executable for modflow.
 
 \subsection{Flopy Model}
-\label{sec:org9230cdc}
+\label{sec:orgcd97ef7}
 
 \begin{minted}[]{python}
 ws = './models/2_simple_model'
@@ -142,7 +141,7 @@ sim.run_simulation()
 \end{minted}
 
 \subsection{Simulation Outputs}
-\label{sec:orgf7fe331}
+\label{sec:org2fb2d27}
 
 Since our run was successful we can extract the values we want.
 \begin{minted}[]{python}
@@ -159,7 +158,7 @@ qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 \end{minted}
 
 \subsection{Plots}
-\label{sec:org4fe239a}
+\label{sec:orgc8c7ef9}
 
 Now we can plot the results here.
 
@@ -245,7 +244,21 @@ plt.show()
 
 It is exaggerated, if we make it the same range on the elevation like in that section plot we can see the variation is mild, it varies from 3820 to 3826, which is a lot if we only plot are near the surface, but not much can be seen when we plot overall plot. 
 
+
+\section{Export to vtk format}
+\label{sec:org14b5dfd}
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+\begin{minted}[]{python}
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+\end{minted}
+
+After running the code we get a \texttt{.vtk} file in the same directory as the model files, after that we can load it in Paraview.
+
 \section{Discussions}
-\label{sec:orge708848}
+\label{sec:org7263ad8}
 One thing very important we can realize in this exercise is that using hard-coded numbers everywhere makes it hard to change grid sizes since we also have to modify it everywhere, so from next exercises we'll be defining some utility functions and simulation parameters, and using them for the overall script, so we only have to modify them at the beginning, and we can change any aspect of the simulation easily.
 \end{document}

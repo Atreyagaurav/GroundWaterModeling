@@ -1,4 +1,4 @@
-% Created 2022-04-16 Sat 14:08
+% Created 2022-04-25 Mon 14:42
 % Intended LaTeX compiler: pdflatex
 \documentclass[titlepage,12pt]{unisubmission}
 	     \usepackage{booktabs}
@@ -26,9 +26,8 @@
 \maketitle
 \setcounter{tocdepth}{2}
 \tableofcontents
-
 \section{Introduction}
-\label{sec:orgc48b41b}
+\label{sec:org2d26311}
 
 Prairie Valley Water is installing a high-capacity well to support the expanded bottled water operations. But the company's permit is denied by the state because the state’s water withdrawal assessment tool predicted that their proposed well could adversely impact the nearby trout stream. The company argues that their well will pump deep groundwater which will have no impact on what happens at the surface. 
 
@@ -41,10 +40,10 @@ Here, we're going to make a groundwater model based on the given situation. Sinc
 And if the recharge to the stream is less than 5$\backslash$% of the index flow, we can say that the overall discharge on the stream will also decrease by the same amount.
 
 \section{Code}
-\label{sec:orgf04b329}
+\label{sec:org1a79e4d}
 
 \subsection{Importing libraries}
-\label{sec:org9ec42e1}
+\label{sec:org55e89fb}
 Importing the libraries. Here \texttt{geometry} package from \texttt{shapely} library is being used for the defining the geometries of rivers as polygons so we can easily get the grid points that are inside it.
 
 \begin{minted}[]{python}
@@ -56,7 +55,7 @@ from shapely import geometry
 \end{minted}
 
 \subsection{Simulation Parameters}
-\label{sec:orgfca4e4f}
+\label{sec:orgfc9d55b}
 Parameters for the grids.
 \begin{minted}[]{python}
 X0 = 0
@@ -119,7 +118,7 @@ well_rate = -200 * 0.1336801*60*24  # GPM → ft³/day
 \end{minted}
 
 \subsection{Utility Functions and Pre-processing}
-\label{sec:orgbfd30a4}
+\label{sec:org069cb3e}
 Let's define a function that gives you the layers it includes if you give it the top and bottom elevation of something.
 
 For example, if you need the layers for well, you can call this function with well screening top and bottom elevation.
@@ -303,7 +302,7 @@ The plot shows two patches of constant head boundaries where our river and trout
 
 
 \subsection{Flopy Model}
-\label{sec:orgbbb9f8c}
+\label{sec:org2310dfb}
 
 Now we're ready to build the model. First things are to define the path and model name, as well as link the modflow executable.
 
@@ -579,7 +578,7 @@ plot_x_section(ext='png', column=60)
 This column section doesn't show much except it's pretty much symmetric.
 
 \subsection{Zone Budget and effect of Well}
-\label{sec:org8967229}
+\label{sec:org16d37f6}
 
 Now let's define zone for trout stream, will use top 2 layers.
 
@@ -643,4 +642,15 @@ Also if we also look at the reduction in the recharge to the river, we can sum b
 OR 192.86 GPM
 
 Which is close to our well\textsubscript{rate} = -38499.8688 ft³/day (-200 GPM).
+
+\section{Export to vtk format}
+\label{sec:orga2bf30e}
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+\begin{minted}[]{python}
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+\end{minted}
 \end{document}

@@ -1,4 +1,4 @@
-% Created 2022-04-16 Sat 19:29
+% Created 2022-04-25 Mon 14:39
 % Intended LaTeX compiler: pdflatex
 \documentclass[titlepage,12pt]{unisubmission}
 	     \usepackage{booktabs}
@@ -26,18 +26,15 @@
 \maketitle
 \setcounter{tocdepth}{2}
 \tableofcontents
-
-Link: \url{https://github.com/modflowpy/flopy}
-
 \section{Introduction}
-\label{sec:org1d47460}
+\label{sec:org97f6941}
 This model is very basic model on a simple grid to show what flopy can do, and be familiar with the functions and classes in flopy. We'll use the model from the flopy github readme, and make and run the model. It's mostly to confirm your installation of modflow and flopy are correct and any code we write for other exercises will be run properly.
 
 \section{Code}
-\label{sec:org8b99801}
+\label{sec:orgf5c47b5}
 
 \subsection{Importing Libraries}
-\label{sec:org21e4280}
+\label{sec:org393517c}
 First Let's load libraries, flopy is the flopy library and matplotlib is for plotting the plots, flopy also uses this internally for the plots.
 
 \begin{minted}[]{python}
@@ -46,7 +43,7 @@ import matplotlib.pyplot as plt
 \end{minted}
 
 \subsection{Flopy model}
-\label{sec:org71b9e97}
+\label{sec:org68176e2}
 We also need to define the working directories flopy will save the modflow model in that directory with given name. Here we also give the exe\textsubscript{name} which is the modflow executable to be called for simulation.
 
 \begin{minted}[]{python}
@@ -147,7 +144,7 @@ plt.show()
 We got the result which is same as that in the example. So it was a success.
 
 \subsection{Zone budget}
-\label{sec:org7d77eac}
+\label{sec:org13d2fc5}
 We hadn't imported numpy so let's do that.
 
 \begin{minted}[]{python}
@@ -205,4 +202,23 @@ bm.get_budget()
 | 1 | 0 | 0 | TO_ZONE_2      |   0.214903 |          0 |          0 |
 | 1 | 0 | 0 | TO_ZONE_3      | 0.21490513 |          0 |          0 |
 \end{minted}
+
+\section{Export to vtk format}
+\label{sec:org51ec253}
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+\begin{minted}[]{python}
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+\end{minted}
+
+After running the code we get a \texttt{.vtk} file in the same directory as the model files, after that we can load it in Paraview, as seen in figure below.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.9\linewidth]{./images/paraview-sc-1.png}
+\caption{Visualization of Heads in Paraview.}
+\end{figure}
 \end{document}

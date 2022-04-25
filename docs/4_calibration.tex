@@ -1,4 +1,4 @@
-% Created 2022-04-15 Fri 14:47
+% Created 2022-04-25 Mon 14:43
 % Intended LaTeX compiler: pdflatex
 \documentclass[titlepage,12pt]{unisubmission}
 	     \usepackage{booktabs}
@@ -26,9 +26,8 @@
 \maketitle
 \setcounter{tocdepth}{2}
 \tableofcontents
-
 \section{Introduction}
-\label{sec:org174b30a}
+\label{sec:orgf52c576}
 
 Planning to install a new 250 GPM well at their main facility, a small manufacturer hires you to determine whether their proposed well (see above) will cause any problems with the stream and an existing well and whether the new well or the existing well would likely become contaminated by a nearby TCE plume as a result of the operation of the new well. The new well will be operated continuously.
 
@@ -41,10 +40,10 @@ Only one well in the vicinity currently pumps (200 GPM) from this aquifer. This 
 This past August, in anticipation of the need to understand this aquifer better, 45 piezometers were installed to determine the water table variation throughout the area. In addition, stream water levels and stream discharges were measured. Average stream discharge measured at a cross section approaching the lake was 1486.65 m³/d (272.73 GPM). The streambed leakance (hydraulic conductivity per unit thickness of the streambed) is unknown and must be calibrated. Annual average water table elevations and stream water levels are provided.
 
 \section{Codes}
-\label{sec:org8ad3ae6}
+\label{sec:org5a0e5f4}
 
 \subsection{Importing libraries}
-\label{sec:orge22cb5e}
+\label{sec:org92e5f0e}
 Same as in other exercises few python libraries are loaded, this one here has many libraries as we're using more and more advanced features.
 
 \texttt{matplotlib.gridspec} is for plotting multiple plots in a grid. \texttt{pandas} is for loading river head values from csv file, and \texttt{scipy.interpolate} is being used to interpolate the head values from river nodes into each cell.
@@ -72,7 +71,7 @@ def csv_2_shape(csvfile, shape=geometry.Polygon):
 \end{minted}
 
 \subsection{Simulation Parameters}
-\label{sec:org471fe4a}
+\label{sec:org5e6a174}
 Simulation grid specifications.
 
 \begin{minted}[]{python}
@@ -162,7 +161,7 @@ well2_rate = -250 * 5.451  # GPM → m³/day
 
 
 \subsection{Calibration Parameters}
-\label{sec:orgaa40f3d}
+\label{sec:org862f54b}
 
 Here the parameters defined can be changed to get different results and these parameters are unknown. The current values are obtained after running batch process with a ton of parameters and selecting the best one.
 
@@ -175,7 +174,7 @@ rech = Rch * 0.0254 / 365                  # m/day
 \end{minted}
 
 \subsection{Utility Functions}
-\label{sec:orgb358ca4}
+\label{sec:org8b62ded}
 
 This function here can be used to find the conductance of river cell, it'll use the intersection length of river with the cell to calculate the equivalent conductance. For now, river width and riverbed thickness are put in arbitrarily, but since we're calibrating it anyway, it should be fine.
 
@@ -239,7 +238,7 @@ def get_grid_points(shape, /, xy_grid_points, layers=None):
 
 
 \subsection{Calibration Data}
-\label{sec:org2ea384b}
+\label{sec:org3baa65d}
 We'll also load the calibration data for the observation wells, we'll get the grid points for all those wells so we can use that to extract the model heads at those wells later.
 
 \begin{minted}[]{python}
@@ -271,16 +270,8 @@ And the grid points for the well that are obtained. The layer is not useful as w
 calib_wells_grid_pts[:5]
 \end{minted}
 
-\begin{minted}[]{text}
-| 0 | 15 | 38 |
-| 0 | 49 | 19 |
-| 0 | 11 | 16 |
-| 0 | 52 | 48 |
-| 0 | 51 | 16 |
-\end{minted}
-
 \subsection{Calibration Dependent Simulation Parameters}
-\label{sec:orgb977cb2}
+\label{sec:orgd11f07a}
 Using the geolayer information we'll make the computational layers and use same hydraulic conductivity for all layers. So first we'll define a lookup table and geolayer characteristics.
 
 \begin{minted}[]{python}
@@ -314,7 +305,7 @@ for lay in range(NLay):
 \end{minted}
 
 \subsection{Stress Period Functions}
-\label{sec:org9c539b3}
+\label{sec:orge8882c9}
 
 The function gives the river stress period data for river package. It'll use the grid points that intersect with the river, and then calculate conductivity based on that intersection to finally return it. Head and conductance as well as grid points are calculated using the functions defined earlier.
 
@@ -394,7 +385,7 @@ plt.show()
 \end{center}
 
 \subsection{Flopy Model}
-\label{sec:org9458b5f}
+\label{sec:orgf7d3bdb}
 
 Let's define the paths and the executable for simulation.
 
@@ -510,8 +501,10 @@ result
 \end{minted}
 
 \begin{minted}[]{text}
-True
+False
 \end{minted}
+
+This part here is not needed for the notebook, I'm putting it here so the tangled python script will end if simulation fails.
 
 \begin{minted}[]{python}
 if not result:
@@ -520,7 +513,7 @@ if not result:
 \end{minted}
 
 \subsection{Simulation Post Processing}
-\label{sec:org92fc9cb}
+\label{sec:org6869e0f}
 We can extract the simulation output from the simulation.
 
 \begin{minted}[]{python}
@@ -567,7 +560,7 @@ Rch=18 inch/year; K=4.48 m/day; RK=0.01 ; RMSE=10.076239940964998; NSE=0.8301897
 
 
 \subsection{Plots}
-\label{sec:org73eb5a2}
+\label{sec:org0d9c338}
 
 \begin{minted}[]{python}
 gs = gs = gridspec.GridSpec(1, 5)
@@ -610,7 +603,7 @@ plt.show()
 Here in the plot we can see the points above and below the model lines with red and blue color respectively. Seeing the distribution of errors we can adjust the values of Kh and RivKh as well as recharge to get the model calibrated.
 
 \section{Summary of Calibration Trials}
-\label{sec:org57f2d98}
+\label{sec:org5fdd8bd}
 
 There were a lot of calibration trials done for the parameters to reach the current value they have.
 
@@ -673,4 +666,18 @@ This time the calibration looked good. I also looked at the residuals.
 Most points are within 1σ of the 1:1 line, and all but 2 points are within the 2σ range. Hence I concluded the calibration.
 
 This overall process and this model was extremely important on understanding the need of calibrating a model as a model is only good enough if it matches the observed data, and even then we can't trust the same model for other data that is wasn't calibrated for.
+
+
+\section{Export to vtk format}
+\label{sec:orgce27509}
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+\begin{minted}[]{python}
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+\end{minted}
+
+After running the code we get a \texttt{.vtk} file in the same directory as the model files, after that we can load it in Paraview, as seen in figure below.
 \end{document}

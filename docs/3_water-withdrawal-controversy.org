@@ -25,6 +25,7 @@
   - [[#utility-functions-and-pre-processing][Utility Functions and Pre-processing]]
   - [[#flopy-model][Flopy Model]]
   - [[#zone-budget-and-effect-of-well][Zone Budget and effect of Well]]
+- [[#export-to-vtk-format][Export to vtk format]]
 
 * Introduction
 
@@ -628,3 +629,13 @@ Also if we also look at the reduction in the recharge to the river, we can sum b
 OR 192.86 GPM
 
 Which is close to our well_rate = -38499.8688 ft³/day (-200 GPM).
+
+* Export to vtk format
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+#+begin_src python :results none
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+#+end_src

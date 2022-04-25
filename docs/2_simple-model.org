@@ -25,6 +25,7 @@
   - [[#flopy-model][Flopy Model]]
   - [[#simulation-outputs][Simulation Outputs]]
   - [[#plots][Plots]]
+- [[#export-to-vtk-format][Export to vtk format]]
 - [[#discussions][Discussions]]
 
 * Introduction
@@ -232,6 +233,20 @@ plt.show()
 [[./images/2_watertable_row-20.png]]
 
 It is exaggerated, if we make it the same range on the elevation like in that section plot we can see the variation is mild, it varies from 3820 to 3826, which is a lot if we only plot are near the surface, but not much can be seen when we plot overall plot. 
+
+
+* Export to vtk format
+
+We can also export the heads data we obtained from the simulation and then visualize it using external tools like Paraview.
+
+#+begin_src python :results none
+import os
+from flopy.export import vtk
+vtk.export_heads(sim.get_model(), os.path.join(ws, head_file), ws, smooth=False, kstpkper=[(0,0)], point_scalars=False, nanval=-1e30)
+#+end_src
+
+After running the code we get a ~.vtk~ file in the same directory as the model files, after that we can load it in Paraview.
+# TODO
 
 * Discussions
 One thing very important we can realize in this exercise is that using hard-coded numbers everywhere makes it hard to change grid sizes since we also have to modify it everywhere, so from next exercises we'll be defining some utility functions and simulation parameters, and using them for the overall script, so we only have to modify them at the beginning, and we can change any aspect of the simulation easily.
