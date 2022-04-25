@@ -22,6 +22,8 @@ These are the main scripts and instructions please go in order from first to las
 - [[./docs/3_water-withdrawal-controversy.org][water-withdrawal-controversy]] : A little more complex model to get zone budget from simulation.
 - [[./docs/4_calibration.org][calibration]] : Example for calibrating a model made in flopy using python.
 
+The scripts are available in different formats, the original one is ~emacs org~ format in ~docs/~, which was used to tangle ~.py~ scripts in ~src/~, the org file was exported in ~.md~ format and that output was used to make the ~.ipynb~ (jupyter-notebook) files that are available in root. The notebooks are placed in project root to make it easier to run without having to symlink anything in subdirectories.
+
   
 ** Declaimer
 The problem statements used in the modeling of this exercises comes from [[https://www.magnet4water.net/FeaturedProblems.aspx?CategoryId=47][magnet4water curriculum]]. Once all those problems were solved from the magnet website's cloud platform, same things was tried to achieved using flopy to compare the results as well as overall difficulties of making the models. I have no association with both and all of this was done for learning purposes.
