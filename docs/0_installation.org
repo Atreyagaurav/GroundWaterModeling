@@ -23,6 +23,7 @@
   - [[#compile-it-from-source-code][Compile it from source code]]
 - [[#flopy-installation][Flopy installation]]
 - [[#other-python-libraries][Other Python libraries]]
+- [[#exporting-to-vtk][Exporting to vtk]]
 
 * How to install modflow for flopy
   Flopy is a python program which only handles the input and output from modflow, so it doesn't have the capacity to do the simulation itself. Hence you need to tell it where to find the modflow program so it can send the files to that program.
@@ -110,3 +111,10 @@ pip install -r requirements.txt
 
 The geopandas is optional, it's only used in data-gen for generating shapefiles (I think).
 - geopandas: for reading writing shapefiles
+
+
+
+* Exporting to vtk
+To export to vtk format, you need a vtk python library as well as working vtk in your computer, it was a bit complicated to setup so I'm not putting this here, if you have used vtk files and paraview program before you can probably figure it out.
+
+For me (Arch Linux) it was simple enough to setup as the vtk was available in official repository, so I could do ~sudo pacman -S vtk~. So depending on your OS you might have to find different ways. Please search it in the [[https://vtk.org/][official website of vtk]].

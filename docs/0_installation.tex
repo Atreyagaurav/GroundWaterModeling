@@ -1,4 +1,4 @@
-% Created 2022-04-17 Sun 01:07
+% Created 2022-04-25 Mon 15:19
 % Intended LaTeX compiler: pdflatex
 \documentclass[titlepage,12pt]{unisubmission}
 	     \usepackage{booktabs}
@@ -27,11 +27,11 @@
 \setcounter{tocdepth}{2}
 \tableofcontents
 \section{How to install modflow for flopy}
-\label{sec:org11898af}
+\label{sec:org1bf6537}
 Flopy is a python program which only handles the input and output from modflow, so it doesn't have the capacity to do the simulation itself. Hence you need to tell it where to find the modflow program so it can send the files to that program.
 
 \subsection{Download as zip}
-\label{sec:org495f9ff}
+\label{sec:orgc1bcd97}
 You can download the zip files for modflow From here:
 \url{https://www.usgs.gov/software/modflow-6-usgs-modular-hydrologic-model}
 
@@ -57,7 +57,7 @@ unzip -l ~/Downloads/mf6.2.2.zip
 You only need the file \texttt{mf6.exe} in the \texttt{/bin} directory to connect to the flopy. 
 
 \subsection{Compile it from source code}
-\label{sec:org3a46b4c}
+\label{sec:org480e5fe}
 You can compile the modflow code with fortran compiler to build the executables.
 
 Using pymake from modflowpy makes it a bit easier. You can read the instructions here:
@@ -82,7 +82,7 @@ You can choose to build only modflow 6.
 Read the instructions in github for more information on that. Or read the documentation at \url{https://mfpymake.readthedocs.io/en/latest/}
 
 \section{Flopy installation}
-\label{sec:org2b1677f}
+\label{sec:org26db465}
 To install flopy you can use pip.
 \begin{minted}[]{bash}
 pip install flopy
@@ -98,7 +98,7 @@ pip install --upgrade git+https://github.com/modflowpy/flopy.git
 
 
 \section{Other Python libraries}
-\label{sec:org0080776}
+\label{sec:org690f59d}
 To install all other libraries at once you can use the list in \texttt{requirements.txt} file.
 
 Running this command in project root will install all requirements.
@@ -121,4 +121,12 @@ The geopandas is optional, it's only used in data-gen for generating shapefiles 
 \begin{itemize}
 \item geopandas: for reading writing shapefiles
 \end{itemize}
+
+
+
+\section{Exporting to vtk}
+\label{sec:org3182fd5}
+To export to vtk format, you need a vtk python library as well as working vtk in your computer, it was a bit complicated to setup so I'm not putting this here, if you have used vtk files and paraview program before you can probably figure it out.
+
+For me (Arch Linux) it was simple enough to setup as the vtk was available in official repository, so I could do \texttt{sudo pacman -S vtk}. So depending on your OS you might have to find different ways. Please search it in the \href{https://vtk.org/}{official website of vtk}.
 \end{document}

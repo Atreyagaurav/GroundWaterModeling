@@ -22,7 +22,9 @@ These are the main scripts and instructions please go in order from first to las
 - [[./docs/3_water-withdrawal-controversy.org][water-withdrawal-controversy]] : A little more complex model to get zone budget from simulation.
 - [[./docs/4_calibration.org][calibration]] : Example for calibrating a model made in flopy using python.
 
-The scripts are available in different formats, the original one is ~emacs org~ format in ~docs/~, which was used to tangle ~.py~ scripts in ~src/~, the org file was exported in ~.md~ format and that output was used to make the ~.ipynb~ (jupyter-notebook) files that are available in root. The notebooks are placed in project root to make it easier to run without having to symlink anything in subdirectories.
+The scripts are available in different formats, the original one is ~emacs org~ format in ~docs/~, which was used to tangle ~.py~ scripts in ~src/~, the org file was exported in ~.md~ format and that output was used to make the ~.ipynb~ (jupyter-notebook) files that are available in root.
+
+Please place the notebooks in project root to make it easier to run without having to symlink anything in subdirectories. The notebooks are available in the Release Uploads [[https://github.com/Atreyagaurav/GroundWaterModeling/releases/tag/0.2][V0.2]], or you can download from this [[https://github.com/Atreyagaurav/GroundWaterModeling/releases/download/0.2/notebooks.zip][direct link]].
 
   
 ** Declaimer
